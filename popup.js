@@ -27,11 +27,17 @@ const historyModalEl = document.getElementById('historyModal');
 const historyModalBodyEl = document.getElementById('historyModalBody');
 const closeHistoryModalBtn = document.getElementById('closeHistoryModal');
 const importFileInputEl = document.getElementById('importFileInput');
+const showHiddenContentBtn = document.getElementById('showHiddenContent');
+const openDatabaseBtn = document.getElementById('openDatabase');
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   await loadHistoricalData();
   await fetchFunnelData();
+
+  // Add event listeners for new buttons
+  showHiddenContentBtn.addEventListener('click', revealHiddenContent);
+  openDatabaseBtn.addEventListener('click', openDatabase);
 });
 
 // Fetch funnel data from content script
@@ -616,3 +622,36 @@ clearHistoryBtn.addEventListener('click', async () => {
     alert('Historical data cleared successfully!');
   }
 });
+
+// Reveal hidden content on current page
+async function revealHiddenContent() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (!tab.id) {
+      alert('Cannot access current tab');
+      return;
+    }
+
+    // Inject and execute the reveal script
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['reveal-hidden-content.js']
+    });
+
+    if (results && results[0]) {
+      const revealedCount = results[0].result || 0;
+      alert(`Revealed ${revealedCount} hidden sections!\n\nThe script will continue to monitor the page for new hidden content.`);
+    } else {
+      alert('Hidden content script executed successfully!');
+    }
+  } catch (error) {
+    console.error('Error revealing hidden content:', error);
+    alert('Error: ' + error.message);
+  }
+}
+
+// Open database page
+function openDatabase() {
+  chrome.tabs.create({ url: chrome.runtime.getURL('database.html') });
+}

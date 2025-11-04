@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CheckoutChamp Funnel Navigator",
-  "version": "1.0.0",
-  "description": "Extract and navigate CheckoutChamp funnel pages quickly",
+  "version": "2.0.0",
+  "description": "Extract and navigate CheckoutChamp funnel pages with database, search, favorites, and A/B test viewing",
   "permissions": [
     "activeTab",
     "storage",

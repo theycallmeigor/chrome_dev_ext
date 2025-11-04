@@ -4,6 +4,7 @@ A Chrome extension designed to quickly extract and navigate CheckoutChamp funnel
 
 ## Features
 
+### Core Features
 - **Automatic Funnel Detection**: Extracts funnel data from sessionStorage on CheckoutChamp pages
 - **Page List View**: Displays all pages in the funnel with their titles and URLs
 - **Preview URL Generation**: Automatically creates preview URLs for pages without URL slugs using CheckoutChamp's preview domain
@@ -15,6 +16,44 @@ A Chrome extension designed to quickly extract and navigate CheckoutChamp funnel
 - **Excel Export**: Export funnel page data to CSV format for analysis (includes preview URLs)
 - **Historical Tracking**: Stores funnel data locally to identify new pages over time
 - **New Page Alerts**: Visual indicators when new pages are detected
+
+### NEW in v2.0 🎉
+
+- **Show Hidden Content**: One-click button to reveal gated/hidden sections on CheckoutChamp pages
+  - Respects viewport intent (mobile/tablet/desktop)
+  - Automatically monitors page for new hidden content
+  - Works with hidden-section, data-gated, and data-cc-gate elements
+
+- **Funnel Database**: Comprehensive database view of all tracked funnels
+  - Grid layout with funnel cards
+  - Visual statistics for each funnel
+  - Quick access to all funnels and pages
+
+- **Advanced Search & Filtering**:
+  - Full-text search across funnel names and page titles
+  - Filter by page type (Landing, Lead, Upsell, Checkout, Thank You, Static)
+  - Filter by favorites only
+  - Filter by A/B tests only
+  - Multiple sort options (newest first, oldest first, name A-Z/Z-A, page count)
+
+- **Favoriting System**:
+  - Star/favorite individual funnels
+  - Star/favorite individual pages
+  - Quick filter to show only favorites
+  - Favorites persist across sessions
+  - Gold star indicators
+
+- **A/B Test Viewer**:
+  - Dedicated A/B test comparison modal
+  - Side-by-side variant comparison
+  - Quick access to both test versions
+  - View all A/B tests in a funnel at once
+
+- **Enhanced Page Display**:
+  - Pages sorted from last to first by default
+  - Visual badges for A/B tests, preview mode, favorites
+  - Click pages for detailed information modal
+  - One-click page opening from database
 
 ## Installation
 
@@ -133,6 +172,60 @@ The extension will automatically:
   - Requires confirmation (action cannot be undone)
   - Useful for starting fresh or cleaning up old data
 
+### 6. Show Hidden Content (NEW)
+
+Click the "Show Hidden Content" button in the popup to reveal gated/hidden sections on the current CheckoutChamp page.
+
+**How it works:**
+- Finds elements with `.hidden-section`, `[data-gated]`, or `[data-cc-gate]` attributes
+- Removes gating attributes while respecting viewport intent (mobile/tablet/desktop)
+- Monitors the page for new hidden content automatically
+- Will not reveal content marked with `no-mobile`, `no-tablet`, or `no-desktop` classes on wrong viewport
+
+**Use cases:**
+- Quickly preview all content on a page
+- Check hidden upsells/downsells
+- Verify gated content without triggering conditions
+- QA and testing funnel pages
+
+### 7. Funnel Database (NEW)
+
+Click "Open Database" to access a comprehensive view of all your tracked funnels.
+
+**Features:**
+- **Grid Layout**: All funnels displayed as cards
+- **Quick Stats**: See page count, A/B test count, and tracking dates for each funnel
+- **Search**: Full-text search across funnel names and page titles
+- **Sort**: Multiple sorting options
+  - Newest First (last seen date)
+  - Oldest First (first seen date)
+  - Name A-Z / Z-A
+  - Most/Least Pages
+- **Filter**:
+  - By page type (Landing, Lead, Upsell, Checkout, etc.)
+  - Favorites only
+  - A/B tests only
+- **Bulk Actions**: Open all pages in a funnel with one click
+
+**Favoriting System:**
+- Star/favorite entire funnels by clicking the star icon
+- Star/favorite individual pages within funnels
+- Filter to show only favorites
+- Gold indicators for favorite items
+- Favorites persist across sessions
+
+**A/B Test Viewer:**
+- Click "View A/B Tests" on any funnel with split testing
+- Side-by-side comparison modal
+- View variant details and traffic split
+- Quick links to open each variant
+
+**Page Details:**
+- Click any page to see detailed information
+- View full URL, slug, A/B testing status
+- See when page was first tracked
+- Quick actions to open or favorite
+
 ## Features Explained
 
 ### A/B Testing Detection
@@ -202,17 +295,21 @@ Pages with preview URLs will show a blue "PREVIEW MODE" badge.
 
 ```
 chrome_dev_ext/
-├── manifest.json           # Extension configuration
-├── popup.html             # Extension popup UI
-├── popup.js               # Popup logic and functionality
-├── content.js             # Content script to access sessionStorage
-├── styles.css             # Styling for popup
-├── icon16.png             # 16x16 icon
-├── icon48.png             # 48x48 icon
-├── icon128.png            # 128x128 icon
-├── create_icons.py        # Icon generator (requires PIL)
-├── create_icons_simple.py # Simple icon generator
-└── README.md              # This file
+├── manifest.json              # Extension configuration (v2.0.0)
+├── popup.html                 # Extension popup UI
+├── popup.js                   # Popup logic and functionality
+├── content.js                 # Content script to access sessionStorage
+├── styles.css                 # Styling for popup
+├── database.html              # Funnel database page (NEW)
+├── database.js                # Database page logic (NEW)
+├── database.css               # Database page styling (NEW)
+├── reveal-hidden-content.js   # Script to reveal gated content (NEW)
+├── icon16.png                 # 16x16 icon
+├── icon48.png                 # 48x48 icon
+├── icon128.png                # 128x128 icon
+├── create_icons.py            # Icon generator (requires PIL)
+├── create_icons_simple.py     # Simple icon generator
+└── README.md                  # This file
 ```
 
 ## Troubleshooting
@@ -257,6 +354,7 @@ All data is stored locally using Chrome's `storage.local` API:
 - Funnel history
 - Page first seen timestamps
 - Split testing status changes
+- Favorites (funnels and pages)
 
 No data is sent to external servers.
 
@@ -269,13 +367,17 @@ No data is sent to external servers.
 ## Future Enhancements
 
 Potential features for future versions:
-- [ ] Filter pages by type (Lead, Upsell, Checkout, etc.)
-- [ ] Search functionality for page titles
+- [x] Filter pages by type (Lead, Upsell, Checkout, etc.) ✅ v2.0
+- [x] Search functionality for page titles ✅ v2.0
+- [x] Favoriting/starring system ✅ v2.0
+- [x] A/B test comparison viewer ✅ v2.0
 - [ ] Page comparison tool
-- [ ] Export to JSON format
+- [ ] Export to JSON format (partial - history export available)
 - [ ] Automatic page screenshots
 - [ ] Funnel flow visualization
 - [ ] Alert notifications for funnel changes
+- [ ] Team collaboration features
+- [ ] Page performance metrics
 
 ## Support
 
@@ -289,6 +391,35 @@ For issues, questions, or suggestions:
 This extension is provided as-is for internal use with CheckoutChamp funnels.
 
 ## Version History
+
+### v2.0.0 (Major Feature Release)
+- **Show Hidden Content**: One-click button to reveal gated sections on pages
+  - Respects viewport intent (mobile/tablet/desktop)
+  - Automatically monitors for new hidden content
+- **Funnel Database**: Comprehensive database view with grid layout
+  - View all tracked funnels in one place
+  - Funnel cards with statistics
+- **Advanced Search & Filtering**:
+  - Full-text search across funnels and pages
+  - Filter by page type (Landing, Lead, Upsell, Checkout, Thank You, Static)
+  - Filter by favorites only
+  - Filter by A/B tests only
+  - Multiple sort options (newest/oldest, name, page count)
+- **Favoriting System**:
+  - Star/favorite funnels and pages
+  - Quick filter to show only favorites
+  - Favorites persist across sessions
+- **A/B Test Viewer**:
+  - Dedicated comparison modal
+  - Side-by-side variant view
+  - Quick access to both test versions
+- **Enhanced Page Display**:
+  - Pages sorted last to first by default
+  - Visual badges for status (A/B test, preview, favorite)
+  - Click pages for detailed modal
+  - One-click page opening
+- Preview URL support for pages without URL slugs
+- Updated UI with better organization
 
 ### v1.0.0 (Initial Release)
 - Extract funnel data from sessionStorage
