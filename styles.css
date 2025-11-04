@@ -244,6 +244,11 @@ header h1 {
   color: white;
 }
 
+.badge-preview {
+  background: #2196F3;
+  color: white;
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;

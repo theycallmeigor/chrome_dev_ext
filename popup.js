@@ -145,10 +145,18 @@ function createPageElement(page, index, isNew) {
 
   // Build URL
   let pageUrl = '';
+  let isPreviewUrl = false;
+
   if (page.externalURL) {
     pageUrl = page.externalURL;
   } else if (page.urlSlug) {
     pageUrl = `${currentDomain}/${page.urlSlug}`;
+  } else if (page.pageView && page.pageView[0] && page.pageView[0].referenceId) {
+    // Construct preview URL for pages without slug
+    const funnelId = funnelData.referenceId;
+    const pageViewId = page.pageView[0].referenceId;
+    pageUrl = `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${pageViewId}.html`;
+    isPreviewUrl = true;
   } else {
     pageUrl = 'No URL available';
   }
@@ -164,14 +172,17 @@ function createPageElement(page, index, isNew) {
   if (page.externalURL) {
     badges += '<span class="badge badge-external">External</span>';
   }
-  if (!page.urlSlug && !page.externalURL) {
-    badges += '<span class="badge badge-no-slug">No Slug</span>';
+  if (isPreviewUrl) {
+    badges += '<span class="badge badge-preview">Preview Mode</span>';
+  }
+  if (!page.urlSlug && !page.externalURL && !isPreviewUrl) {
+    badges += '<span class="badge badge-no-slug">No URL</span>';
   }
 
   pageDiv.innerHTML = `
     <div class="page-header">
       <div class="page-checkbox">
-        <input type="checkbox" class="page-select" data-url="${pageUrl}" ${!page.urlSlug && !page.externalURL ? 'disabled' : ''}>
+        <input type="checkbox" class="page-select" data-url="${pageUrl}" ${pageUrl === 'No URL available' ? 'disabled' : ''}>
       </div>
       <div class="page-info">
         <div class="page-title">
@@ -316,9 +327,26 @@ function exportToExcel() {
   }
 
   // Create CSV content
-  const headers = ['Title', 'URL', 'URL Slug', 'A/B Testing Enabled', 'Page Type', 'External URL', 'Reference ID'];
+  const headers = ['Title', 'URL', 'URL Slug', 'A/B Testing Enabled', 'Page Type', 'External URL', 'Reference ID', 'Preview URL'];
   const rows = pages.map(page => {
-    const pageUrl = page.externalURL || (page.urlSlug ? `${currentDomain}/${page.urlSlug}` : 'N/A');
+    // Build URL (same logic as in createPageElement)
+    let pageUrl = '';
+    let previewUrl = '';
+
+    if (page.externalURL) {
+      pageUrl = page.externalURL;
+    } else if (page.urlSlug) {
+      pageUrl = `${currentDomain}/${page.urlSlug}`;
+    } else if (page.pageView && page.pageView[0] && page.pageView[0].referenceId) {
+      // Construct preview URL
+      const funnelId = funnelData.referenceId;
+      const pageViewId = page.pageView[0].referenceId;
+      previewUrl = `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${pageViewId}.html`;
+      pageUrl = previewUrl;
+    } else {
+      pageUrl = 'N/A';
+    }
+
     return [
       escapeCSV(page.title || 'Untitled'),
       escapeCSV(pageUrl),
@@ -326,7 +354,8 @@ function exportToExcel() {
       page.splitEnabled ? 'Yes' : 'No',
       getPageTypeName(page.pageView[0]?.pageType),
       escapeCSV(page.externalURL || 'N/A'),
-      page.referenceId
+      page.referenceId,
+      escapeCSV(previewUrl || 'N/A')
     ];
   });
 

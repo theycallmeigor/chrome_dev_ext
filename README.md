@@ -6,12 +6,13 @@ A Chrome extension designed to quickly extract and navigate CheckoutChamp funnel
 
 - **Automatic Funnel Detection**: Extracts funnel data from sessionStorage on CheckoutChamp pages
 - **Page List View**: Displays all pages in the funnel with their titles and URLs
+- **Preview URL Generation**: Automatically creates preview URLs for pages without URL slugs using CheckoutChamp's preview domain
 - **A/B Test Identification**: Highlights pages with split testing enabled
 - **Bulk Operations**:
   - Select individual pages or all pages
   - Open multiple pages in new tabs
   - Open all pages with one click
-- **Excel Export**: Export funnel page data to CSV format for analysis
+- **Excel Export**: Export funnel page data to CSV format for analysis (includes preview URLs)
 - **Historical Tracking**: Stores funnel data locally to identify new pages over time
 - **New Page Alerts**: Visual indicators when new pages are detected
 
@@ -118,12 +119,22 @@ The extension stores funnel data locally in Chrome's storage:
 The extension builds page URLs using this logic:
 1. If page has `externalURL`: uses that directly
 2. If page has `urlSlug`: constructs `{domain}/{urlSlug}`
-3. If neither: marks as "No URL available"
+3. If page has no slug but has `pageView[0].referenceId`: constructs preview URL
+4. If none of the above: marks as "No URL available"
 
-Example:
+**Examples:**
+
+Standard URL with slug:
 - Domain: `https://www.pureglowscience.com`
 - URL Slug: `refund-policy`
 - Result: `https://www.pureglowscience.com/refund-policy`
+
+Preview URL (no slug):
+- Funnel ID: `d7b8cb1e-f2ac-4548-acca-6841fd2ea8b7`
+- Page View ID: `6481c6e4-bb0d-4a37-b7a3-fbf38dc1d857`
+- Result: `https://funnels-build.thisisatestsiteonly.com/d7b8cb1e-f2ac-4548-acca-6841fd2ea8b7/6481c6e4-bb0d-4a37-b7a3-fbf38dc1d857.html`
+
+Pages with preview URLs will show a blue "PREVIEW MODE" badge.
 
 ## File Structure
 
@@ -164,9 +175,10 @@ This means the extension couldn't find `funnelData` in sessionStorage. Possible 
 
 ### Pages not opening
 
-- Check if the page has a valid URL or urlSlug
-- Pages without URLs will be disabled (greyed out checkbox)
-- Some pages might be internal/system pages without public URLs
+- Most pages should now open, including those with preview URLs (blue "PREVIEW MODE" badge)
+- If a page checkbox is disabled, it means the page has no URL slug, external URL, or valid pageView reference
+- Preview URLs use the format: `https://funnels-build.thisisatestsiteonly.com/{funnelId}/{pageViewId}.html`
+- Preview URLs allow you to access pages that don't have public URLs configured yet
 
 ## Technical Details
 
