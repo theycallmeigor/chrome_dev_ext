@@ -240,8 +240,7 @@ async function toggleFunnelFavorite(funnelId) {
 }
 
 // Toggle page favorite
-async function togglePageFavorite(funnelId, pageId, event) {
-  event.stopPropagation();
+async function togglePageFavorite(funnelId, pageId) {
   const key = `${funnelId}:${pageId}`;
   if (favorites.pages[key]) {
     delete favorites.pages[key];
@@ -269,8 +268,13 @@ function buildPageURL(page, funnelId, funnelData) {
 }
 
 // Show page details modal
-function showPageDetails(funnelId, pageId, funnel) {
+function showPageDetails(funnelId, pageId) {
+  const funnel = historicalData[funnelId];
+  if (!funnel) return;
+
   const page = funnel.pages[pageId];
+  if (!page) return;
+
   const pageURL = buildPageURL(page, funnelId, funnel);
   const isFavorite = favorites.pages[`${funnelId}:${pageId}`];
 
@@ -305,19 +309,37 @@ function showPageDetails(funnelId, pageId, funnel) {
     </div>
     <div style="margin-top: 20px; display: flex; gap: 10px;">
       <button class="btn btn-primary" onclick="window.open('${pageURL}', '_blank')">Open Page</button>
-      <button class="btn btn-secondary" onclick="togglePageFavorite('${funnelId}', '${pageId}', event)">
+      <button class="btn btn-secondary toggle-page-favorite-modal" data-funnel-id="${funnelId}" data-page-id="${pageId}">
         ${isFavorite ? 'Remove Favorite' : 'Add Favorite'}
       </button>
     </div>
   `;
 
   document.getElementById('pageDetailsContent').innerHTML = content;
+
+  // Add event listener for favorite button in modal
+  const favoriteBtn = pageDetailsModal.querySelector('.toggle-page-favorite-modal');
+  if (favoriteBtn) {
+    favoriteBtn.addEventListener('click', async () => {
+      await togglePageFavorite(funnelId, pageId);
+      // Close and reopen modal to update
+      pageDetailsModal.classList.add('hidden');
+      setTimeout(() => showPageDetails(funnelId, pageId), 100);
+    });
+  }
+
   pageDetailsModal.classList.remove('hidden');
 }
 
 // Show A/B test comparison
-function showABTestComparison(funnelId, pageId, funnel) {
+function showABTestComparison(funnelId, pageId) {
+  const funnel = historicalData[funnelId];
+  if (!funnel) return;
+
   const page = funnel.pages[pageId];
+  if (!page) return;
+
+  const pageURL = buildPageURL(page, funnelId, funnel);
 
   // In a real scenario, you'd fetch both variants
   // For now, show placeholder
@@ -337,7 +359,7 @@ function showABTestComparison(funnelId, pageId, funnel) {
         <span class="variant-value">50%</span>
       </div>
       <div class="variant-actions">
-        <button class="btn btn-primary btn-small" onclick="window.open('${buildPageURL(page, funnelId, funnel)}', '_blank')">Open Variant A</button>
+        <button class="btn btn-primary btn-small" onclick="window.open('${pageURL}', '_blank')">Open Variant A</button>
       </div>
     </div>
     <div class="ab-variant">
@@ -355,7 +377,7 @@ function showABTestComparison(funnelId, pageId, funnel) {
         <span class="variant-value">50%</span>
       </div>
       <div class="variant-actions">
-        <button class="btn btn-primary btn-small" onclick="window.open('${buildPageURL(page, funnelId, funnel)}', '_blank')">Open Variant B</button>
+        <button class="btn btn-primary btn-small" onclick="window.open('${pageURL}', '_blank')">Open Variant B</button>
       </div>
     </div>
   `;
@@ -401,6 +423,59 @@ function renderDatabase() {
 
   // Render funnel cards
   databaseContent.innerHTML = funnels.map(funnel => createFunnelCard(funnel)).join('');
+
+  // Add event listeners after rendering
+  attachEventListeners();
+}
+
+// Attach event listeners to dynamically created elements
+function attachEventListeners() {
+  // Funnel favorite buttons
+  document.querySelectorAll('.favorite-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const funnelId = e.target.closest('.funnel-card').dataset.funnelId;
+      toggleFunnelFavorite(funnelId);
+    });
+  });
+
+  // Open all pages buttons
+  document.querySelectorAll('.open-all-pages-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const funnelId = e.target.dataset.funnelId;
+      openAllPages(funnelId);
+    });
+  });
+
+  // View A/B tests buttons
+  document.querySelectorAll('.view-ab-tests-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const funnelId = e.target.dataset.funnelId;
+      showABTests(funnelId);
+    });
+  });
+
+  // Page items
+  document.querySelectorAll('.page-item-compact').forEach(item => {
+    const funnelId = item.dataset.funnelId;
+    const pageId = item.dataset.pageId;
+
+    // Click to show details
+    item.addEventListener('click', (e) => {
+      // Don't trigger if clicking favorite button
+      if (!e.target.closest('.page-favorite-btn')) {
+        showPageDetails(funnelId, pageId);
+      }
+    });
+
+    // Favorite button
+    const favoriteBtn = item.querySelector('.page-favorite-btn');
+    if (favoriteBtn) {
+      favoriteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePageFavorite(funnelId, pageId);
+      });
+    }
+  });
 }
 
 // Create funnel card
@@ -410,10 +485,10 @@ function createFunnelCard(funnel) {
   const abTestCount = pages.filter(([_, page]) => page.splitEnabled).length;
 
   return `
-    <div class="funnel-card ${isFavorite ? 'favorite' : ''}">
+    <div class="funnel-card ${isFavorite ? 'favorite' : ''}" data-funnel-id="${funnel.id}">
       <div class="funnel-card-header">
         <div class="funnel-card-title">${funnel.name || 'Unnamed Funnel'}</div>
-        <button class="favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFunnelFavorite('${funnel.id}')">
+        <button class="favorite-btn ${isFavorite ? 'active' : ''}">
           ${isFavorite ? '★' : '☆'}
         </button>
       </div>
@@ -442,8 +517,8 @@ function createFunnelCard(funnel) {
       </div>
 
       <div class="funnel-card-actions">
-        <button class="btn btn-primary btn-small" onclick="openAllPages('${funnel.id}')">Open All Pages</button>
-        ${abTestCount > 0 ? `<button class="btn btn-secondary btn-small" onclick="showABTests('${funnel.id}')">View A/B Tests</button>` : ''}
+        <button class="btn btn-primary btn-small open-all-pages-btn" data-funnel-id="${funnel.id}">Open All Pages</button>
+        ${abTestCount > 0 ? `<button class="btn btn-secondary btn-small view-ab-tests-btn" data-funnel-id="${funnel.id}">View A/B Tests</button>` : ''}
       </div>
     </div>
   `;
@@ -456,7 +531,7 @@ function createPageItem(funnelId, pageId, page, funnel) {
 
   return `
     <div class="page-item-compact ${isABTest ? 'ab-test' : ''} ${isFavorite ? 'favorite' : ''}"
-         onclick="showPageDetails('${funnelId}', '${pageId}', ${JSON.stringify(funnel).replace(/"/g, '&quot;')})">
+         data-funnel-id="${funnelId}" data-page-id="${pageId}">
       <div class="page-item-info">
         <div class="page-item-title">${page.title || 'Untitled'}</div>
         <div class="page-item-type">${page.urlSlug || 'No slug'}</div>
@@ -466,8 +541,7 @@ function createPageItem(funnelId, pageId, page, funnel) {
           ${isABTest ? '<span class="badge badge-ab">A/B</span>' : ''}
           ${!page.urlSlug ? '<span class="badge badge-preview">Preview</span>' : ''}
         </div>
-        <button class="page-favorite-btn ${isFavorite ? 'active' : ''}"
-                onclick="togglePageFavorite('${funnelId}', '${pageId}', event)">
+        <button class="page-favorite-btn ${isFavorite ? 'active' : ''}">
           ${isFavorite ? '★' : '☆'}
         </button>
       </div>
@@ -503,13 +577,5 @@ function showABTests(funnelId) {
 
   // Show first A/B test
   const [pageId, page] = abTestPages[0];
-  showABTestComparison(funnelId, pageId, funnel);
+  showABTestComparison(funnelId, pageId);
 }
-
-// Make functions globally available
-window.toggleFunnelFavorite = toggleFunnelFavorite;
-window.togglePageFavorite = togglePageFavorite;
-window.showPageDetails = showPageDetails;
-window.showABTestComparison = showABTestComparison;
-window.openAllPages = openAllPages;
-window.showABTests = showABTests;
