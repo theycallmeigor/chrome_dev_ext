@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CheckoutChamp Funnel Navigator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CheckoutChamp Funnel Pages</h1>
+      <div class="header-actions">
+        <label class="checkbox-container">
+          <input type="checkbox" id="selectAll">
+          <span>Select All</span>
+        </label>
+        <button id="openSelected" class="btn btn-primary">Open Selected</button>
+        <button id="openAll" class="btn btn-secondary">Open All</button>
+        <button id="exportExcel" class="btn btn-success">Export to Excel</button>
+      </div>
+    </header>
+
+    <div id="funnelInfo" class="funnel-info hidden">
+      <h2 id="funnelName"></h2>
+      <div id="funnelDetails"></div>
+    </div>
+
+    <div id="loading" class="loading">
+      <p>Loading funnel data...</p>
+    </div>
+
+    <div id="error" class="error hidden">
+      <p>No CheckoutChamp funnel data found on this page.</p>
+      <p class="error-detail">Make sure you're on a CheckoutChamp page and the page has fully loaded.</p>
+    </div>
+
+    <div id="pagesList" class="pages-list hidden">
+      <!-- Pages will be dynamically inserted here -->
+    </div>
+
+    <div id="newPagesIndicator" class="new-pages-indicator hidden">
+      <span class="badge">New pages detected!</span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
