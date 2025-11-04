@@ -98,7 +98,40 @@ The extension will automatically:
 
 **Export Data**
 - "Export to Excel": Downloads a CSV file with all funnel page data
-- File includes: Title, URL, URL Slug, A/B Testing status, Page Type, and Reference ID
+- File includes: Title, URL, URL Slug, A/B Testing status, Page Type, Preview URL, and Reference ID
+
+### 5. Historical Data Management
+
+**View History Statistics**
+- The extension automatically displays tracking statistics at the bottom
+- Shows: Total funnels tracked, total pages tracked, current funnel page count
+- Displays when you first started tracking funnels
+
+**History Actions**
+- **View History**: Opens a modal showing all tracked funnels with details
+  - See all funnels you've visited
+  - View first seen and last seen dates
+  - See complete page lists for each funnel
+  - Identify current funnel
+  - See A/B testing status for all pages
+
+- **Export History**: Download all historical data as JSON
+  - Backs up your tracking data to a file
+  - File name: `checkoutchamp_history_YYYY-MM-DD.json`
+  - Contains all funnel data, page information, and timestamps
+  - Use this to keep backups or transfer data between computers
+
+- **Import History**: Load historical data from a JSON file
+  - Restore from a previous backup
+  - Transfer tracking data from another computer
+  - Choose to merge with existing data or replace it
+  - Merge mode: Keeps existing + adds imported data (recommended)
+  - Replace mode: Deletes existing, uses only imported data
+
+- **Clear History**: Delete all historical tracking data
+  - Removes all stored funnel data
+  - Requires confirmation (action cannot be undone)
+  - Useful for starting fresh or cleaning up old data
 
 ## Features Explained
 
@@ -106,13 +139,42 @@ The extension will automatically:
 
 Pages with `splitEnabled: true` will show an "A/B TESTING" badge in orange/red. This helps you quickly identify which pages have split tests configured.
 
-### Historical Tracking
+### Historical Tracking & Comparison
 
-The extension stores funnel data locally in Chrome's storage:
-- Tracks which funnels you've visited
-- Records when pages were first seen
+**Automatic Tracking:**
+The extension automatically stores funnel data locally in Chrome's storage:
+- Tracks which funnels you've visited (by funnel reference ID)
+- Records when each page was first seen
+- Tracks when funnels were last visited
+- Monitors A/B testing status changes
 - Highlights new pages with a "NEW" badge
-- Helps you monitor funnel changes over time
+
+**New Page Detection:**
+When you revisit a funnel:
+- Extension compares current pages with historical data
+- New pages are highlighted with a green "NEW" badge
+- Notification appears showing how many new pages were detected
+- Helps you immediately spot funnel changes
+
+**Data Persistence:**
+- All data is stored locally on your computer (Chrome's local storage)
+- Data persists across browser sessions
+- No data is sent to external servers
+- You control your data with export/import/clear options
+
+**Backup & Transfer:**
+- Export your historical data to keep backups
+- Import data to restore from backup
+- Transfer tracking data between computers
+- Merge data from multiple sources
+
+**Use Cases:**
+- Track funnel evolution over time
+- Compare funnel structures across different dates
+- Identify when new upsells/downsells are added
+- Monitor A/B test rollouts
+- Keep records of client funnel configurations
+- Share funnel tracking data with team members
 
 ### URL Construction
 

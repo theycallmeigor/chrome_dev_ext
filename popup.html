@@ -39,9 +39,36 @@
       <!-- Pages will be dynamically inserted here -->
     </div>
 
+    <div id="historySection" class="history-section hidden">
+      <h3>Historical Data Management</h3>
+      <div id="historyStats" class="history-stats">
+        <!-- History stats will be inserted here -->
+      </div>
+      <div class="history-actions">
+        <button id="viewHistory" class="btn btn-secondary btn-small">View History</button>
+        <button id="exportHistory" class="btn btn-success btn-small">Export History</button>
+        <button id="importHistory" class="btn btn-info btn-small">Import History</button>
+        <button id="clearHistory" class="btn btn-danger btn-small">Clear History</button>
+      </div>
+    </div>
+
+    <div id="historyModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Historical Funnel Data</h2>
+          <button class="close-modal" id="closeHistoryModal">&times;</button>
+        </div>
+        <div class="modal-body" id="historyModalBody">
+          <!-- History details will be inserted here -->
+        </div>
+      </div>
+    </div>
+
     <div id="newPagesIndicator" class="new-pages-indicator hidden">
       <span class="badge">New pages detected!</span>
     </div>
+
+    <input type="file" id="importFileInput" accept=".json" style="display: none;">
   </div>
 
   <script src="popup.js"></script>
