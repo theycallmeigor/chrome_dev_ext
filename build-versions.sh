@@ -67,8 +67,8 @@ cp icon48.png "$FULL_FOLDER/"
 cp icon128.png "$FULL_FOLDER/"
 cp reveal-hidden-content.js "$FULL_FOLDER/" 2>/dev/null || true
 
-# Update manifest version for FULL
-sed -i '' 's/"version": "3.0.0"/"version": "4.0.0-dev"/' "$FULL_FOLDER/manifest.json"
+# Update manifest version for FULL (must be numeric only for Chrome)
+sed -i '' 's/"version": "3.0.0"/"version": "4.0.0"/' "$FULL_FOLDER/manifest.json"
 sed -i '' 's/"name": "Funnel Navigator for CheckoutChamp"/"name": "Funnel Navigator - Full Edition"/' "$FULL_FOLDER/manifest.json"
 
 # Create FULL ZIP
