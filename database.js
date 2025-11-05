@@ -433,7 +433,7 @@ function attachEventListeners() {
   // Funnel favorite buttons
   document.querySelectorAll('.favorite-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const funnelId = btn.closest('.funnel-card').dataset.funnelId;
+      const funnelId = e.target.closest('.funnel-card').dataset.funnelId;
       toggleFunnelFavorite(funnelId);
     });
   });
@@ -441,7 +441,7 @@ function attachEventListeners() {
   // Open all pages buttons
   document.querySelectorAll('.open-all-pages-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const funnelId = btn.dataset.funnelId;
+      const funnelId = e.target.dataset.funnelId;
       openAllPages(funnelId);
     });
   });
@@ -449,7 +449,7 @@ function attachEventListeners() {
   // View A/B tests buttons
   document.querySelectorAll('.view-ab-tests-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const funnelId = btn.dataset.funnelId;
+      const funnelId = e.target.dataset.funnelId;
       showABTests(funnelId);
     });
   });
