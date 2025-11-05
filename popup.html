@@ -28,6 +28,63 @@
     <div id="funnelInfo" class="funnel-info hidden">
       <h2 id="funnelName"></h2>
       <div id="funnelDetails"></div>
+
+      <!-- Funnel Ownership -->
+      <div class="ownership-section">
+        <label class="ownership-toggle">
+          <input type="checkbox" id="markAsMyFunnel">
+          <span class="ownership-label">
+            <span class="ownership-icon">🔑</span>
+            <span>This is my funnel (I can edit it)</span>
+          </span>
+        </label>
+        <div class="ownership-hint">Enable Quick Actions for editing</div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions-section" id="quickActionsSection">
+        <h3>Quick Actions</h3>
+        <div class="quick-actions-grid">
+          <button id="editFunnelBtn" class="quick-action-btn" title="Open funnel editor">
+            <span class="action-icon">✏️</span>
+            <span class="action-label">Edit Funnel</span>
+          </button>
+          <button id="copyEditFunnelBtn" class="quick-action-btn-secondary" title="Copy funnel editor URL">
+            <span class="action-icon">📋</span>
+            <span class="action-label">Copy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Controls -->
+      <div class="filter-bar">
+        <div class="filter-controls">
+          <select id="pageTypeFilterPopup" class="filter-select">
+            <option value="all">All Page Types</option>
+            <option value="1">Landing Page</option>
+            <option value="2">Lead Page</option>
+            <option value="3">Upsell</option>
+            <option value="4">Checkout</option>
+            <option value="5">Thank You</option>
+            <option value="14">Static Page</option>
+          </select>
+
+          <label class="checkbox-filter">
+            <input type="checkbox" id="showFavoritesOnlyPopup">
+            <span>Favorites Only</span>
+          </label>
+
+          <label class="checkbox-filter">
+            <input type="checkbox" id="showABTestsOnlyPopup">
+            <span>A/B Tests Only</span>
+          </label>
+
+          <label class="checkbox-filter">
+            <input type="checkbox" id="showNewOnlyPopup">
+            <span>New Pages Only</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div id="loading" class="loading">
