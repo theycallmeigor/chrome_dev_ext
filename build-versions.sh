@@ -8,12 +8,13 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 echo "🚀 Building BETA and FULL versions..."
 echo ""
 
-# Create output directory if it doesn't exist
-mkdir -p "$OUTPUT_DIR"
+# Create timestamped parent folder
+BUILD_FOLDER="$OUTPUT_DIR/$TIMESTAMP"
+mkdir -p "$BUILD_FOLDER"
 
-# Create timestamped folders
-BETA_FOLDER="$OUTPUT_DIR/${TIMESTAMP}_BETA"
-FULL_FOLDER="$OUTPUT_DIR/${TIMESTAMP}_FULL"
+# Create BETA and FULL folders inside
+BETA_FOLDER="$BUILD_FOLDER/BETA"
+FULL_FOLDER="$BUILD_FOLDER/FULL"
 
 mkdir -p "$BETA_FOLDER"
 mkdir -p "$FULL_FOLDER"
@@ -38,11 +39,11 @@ cp reveal-hidden-content.js "$BETA_FOLDER/" 2>/dev/null || true
 
 # Create BETA ZIP
 cd "$BETA_FOLDER"
-zip -q -r "../${TIMESTAMP}_BETA.zip" .
+zip -q -r "../BETA.zip" .
 
 echo "✅ BETA created:"
 echo "   📁 Folder: $BETA_FOLDER"
-echo "   📦 ZIP: $OUTPUT_DIR/${TIMESTAMP}_BETA.zip"
+echo "   📦 ZIP: $BUILD_FOLDER/BETA.zip"
 echo ""
 
 # FULL VERSION (Complex - all files including database)
@@ -72,23 +73,23 @@ sed -i '' 's/"name": "Funnel Navigator for CheckoutChamp"/"name": "Funnel Naviga
 
 # Create FULL ZIP
 cd "$FULL_FOLDER"
-zip -q -r "../${TIMESTAMP}_FULL.zip" .
+zip -q -r "../FULL.zip" .
 
 echo "✅ FULL created:"
 echo "   📁 Folder: $FULL_FOLDER"
-echo "   📦 ZIP: $OUTPUT_DIR/${TIMESTAMP}_FULL.zip"
+echo "   📦 ZIP: $BUILD_FOLDER/FULL.zip"
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🎉 Done!"
 echo ""
-echo "📍 All files saved to: $OUTPUT_DIR"
+echo "📍 All files saved to: $BUILD_FOLDER"
 echo ""
 echo "📋 To use:"
 echo "   BETA: Load $BETA_FOLDER in Chrome"
 echo "   FULL: Load $FULL_FOLDER in Chrome"
 echo ""
 echo "📦 To submit to Chrome Web Store:"
-echo "   Upload: ${TIMESTAMP}_BETA.zip"
+echo "   Upload: $BUILD_FOLDER/BETA.zip"
 echo ""
 echo "🔄 Run this script again anytime to create new versions!"
