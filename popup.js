@@ -38,6 +38,7 @@ const closeHistoryModalBtn = document.getElementById('closeHistoryModal');
 const importFileInputEl = document.getElementById('importFileInput');
 const showHiddenContentBtn = document.getElementById('showHiddenContent');
 const openDatabaseBtn = document.getElementById('openDatabase');
+const openSettingsBtn = document.getElementById('openSettings');
 const pageTypeFilterPopup = document.getElementById('pageTypeFilterPopup');
 const showFavoritesOnlyPopup = document.getElementById('showFavoritesOnlyPopup');
 const showABTestsOnlyPopup = document.getElementById('showABTestsOnlyPopup');
@@ -58,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Add event listeners for new buttons
   showHiddenContentBtn.addEventListener('click', revealHiddenContent);
   openDatabaseBtn.addEventListener('click', openDatabase);
+  openSettingsBtn.addEventListener('click', openSettings);
 
   // Add filter event listeners
   pageTypeFilterPopup.addEventListener('change', handlePopupFilterChange);
@@ -947,6 +949,11 @@ async function revealHiddenContent() {
 // Open database page
 function openDatabase() {
   chrome.tabs.create({ url: chrome.runtime.getURL('database.html') });
+}
+
+// Open settings page
+function openSettings() {
+  chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
 }
 
 // ============================================================

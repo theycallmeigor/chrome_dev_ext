@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extension Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="settings-container">
+    <header class="settings-header">
+      <h1>⚙️ Extension Settings</h1>
+      <button id="backToPopup" class="btn-back">← Back</button>
+    </header>
+
+    <main class="settings-content">
+      <!-- Domain Whitelist Section -->
+      <section class="settings-section">
+        <div class="section-header">
+          <h2>🌐 Domain Whitelist</h2>
+          <span class="domain-count" id="domainCount">0/10</span>
+        </div>
+
+        <p class="section-description">
+          Add custom domains where you host CheckoutChamp funnels. The extension will only access data from these approved domains.
+        </p>
+
+        <div class="domain-list-container">
+          <!-- Default Domains (Always Included) -->
+          <div class="default-domains">
+            <h3>Default Domains (Always Active)</h3>
+            <div class="domain-item default-domain">
+              <span class="domain-icon">🔒</span>
+              <span class="domain-name">checkoutchamp.com</span>
+              <span class="domain-badge">Official</span>
+            </div>
+            <div class="domain-item default-domain">
+              <span class="domain-icon">🔒</span>
+              <span class="domain-name">thisisatestsiteonly.com</span>
+              <span class="domain-badge">Preview</span>
+            </div>
+          </div>
+
+          <!-- Custom Domains -->
+          <div class="custom-domains">
+            <h3>Your Custom Domains</h3>
+            <div id="domainList" class="domain-list">
+              <!-- Domain items will be inserted here -->
+            </div>
+
+            <!-- Add Domain Form -->
+            <div class="add-domain-form" id="addDomainForm">
+              <input
+                type="text"
+                id="domainInput"
+                placeholder="example.com or shop.example.com"
+                class="domain-input"
+              >
+              <button id="addDomainBtn" class="btn-add-domain" title="Add domain">
+                <span class="plus-icon">+</span>
+              </button>
+            </div>
+
+            <div id="domainError" class="error-message hidden"></div>
+            <div id="domainSuccess" class="success-message hidden"></div>
+          </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+          <span class="info-icon">💡</span>
+          <div class="info-content">
+            <strong>How to add a domain:</strong>
+            <ul>
+              <li>Enter just the domain name (e.g., "shop.try-spartan.com")</li>
+              <li>Don't include "https://" or paths</li>
+              <li>Subdomains are treated separately (shop.example.com ≠ example.com)</li>
+              <li>You can add up to 10 custom domains</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Permissions Section -->
+      <section class="settings-section">
+        <div class="section-header">
+          <h2>🔐 Permissions</h2>
+        </div>
+
+        <p class="section-description">
+          Current permissions granted to this extension.
+        </p>
+
+        <div class="permissions-list" id="permissionsList">
+          <!-- Will be populated by JavaScript -->
+        </div>
+      </section>
+
+      <!-- Data Management Section -->
+      <section class="settings-section">
+        <div class="section-header">
+          <h2>💾 Data Management</h2>
+        </div>
+
+        <div class="data-stats" id="dataStats">
+          <!-- Will be populated by JavaScript -->
+        </div>
+
+        <div class="button-group">
+          <button id="exportAllData" class="btn btn-secondary">
+            📤 Export All Data
+          </button>
+          <button id="clearAllData" class="btn btn-danger">
+            🗑️ Clear All Data
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
