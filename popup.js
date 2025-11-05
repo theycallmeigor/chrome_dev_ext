@@ -41,6 +41,8 @@ const pageTypeFilterPopup = document.getElementById('pageTypeFilterPopup');
 const showFavoritesOnlyPopup = document.getElementById('showFavoritesOnlyPopup');
 const showABTestsOnlyPopup = document.getElementById('showABTestsOnlyPopup');
 const showNewOnlyPopup = document.getElementById('showNewOnlyPopup');
+const editFunnelBtn = document.getElementById('editFunnelBtn');
+const copyEditFunnelBtn = document.getElementById('copyEditFunnelBtn');
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
@@ -58,6 +60,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   showFavoritesOnlyPopup.addEventListener('change', handlePopupFilterChange);
   showABTestsOnlyPopup.addEventListener('change', handlePopupFilterChange);
   showNewOnlyPopup.addEventListener('change', handlePopupFilterChange);
+
+  // Add quick action event listeners
+  editFunnelBtn.addEventListener('click', openEditFunnel);
+  copyEditFunnelBtn.addEventListener('click', copyEditFunnelURL);
 });
 
 // Fetch funnel data from content script
@@ -249,11 +255,19 @@ function createPageElement(page, index, isNew) {
         ${isFavorite ? '★' : '☆'}
       </button>
     </div>
-    ${pageUrl !== 'No URL available' ? `
     <div class="page-actions">
-      <button class="btn btn-primary btn-small open-page-btn" data-url="${pageUrl}">Open Page</button>
+      ${pageUrl !== 'No URL available' ? `
+        <button class="btn btn-primary btn-small open-page-btn" data-url="${pageUrl}">Open Page</button>
+      ` : ''}
+      <button class="btn btn-secondary btn-small edit-page-btn" title="Edit page in web builder">✏️ Edit</button>
+      <button class="btn-icon btn-small copy-edit-btn" title="Copy page editor URL">📋</button>
+      ${page.pageView?.[0]?.referenceId ? `
+        <button class="btn-icon btn-small copy-preview-btn" title="Copy preview URL">🔗</button>
+      ` : ''}
+      ${page.urlSlug ? `
+        <button class="btn-icon btn-small copy-live-btn" title="Copy live URL">🌐</button>
+      ` : ''}
     </div>
-    ` : ''}
   `;
 
   // Add click handler for individual page open
@@ -273,6 +287,44 @@ function createPageElement(page, index, isNew) {
       e.preventDefault();
       e.stopPropagation();
       togglePageFavorite(funnelId, pageId);
+    });
+  }
+
+  // Add click handlers for quick action buttons
+  const editPageBtn = pageDiv.querySelector('.edit-page-btn');
+  if (editPageBtn) {
+    editPageBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openPageEditor(funnelId, pageId);
+    });
+  }
+
+  const copyEditBtn = pageDiv.querySelector('.copy-edit-btn');
+  if (copyEditBtn) {
+    copyEditBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      copyPageEditorURL(funnelId, pageId);
+    });
+  }
+
+  const copyPreviewBtn = pageDiv.querySelector('.copy-preview-btn');
+  if (copyPreviewBtn) {
+    copyPreviewBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const pageViewId = page.pageView?.[0]?.referenceId;
+      if (pageViewId) {
+        copyPreviewURL(funnelId, pageViewId);
+      }
+    });
+  }
+
+  const copyLiveBtn = pageDiv.querySelector('.copy-live-btn');
+  if (copyLiveBtn) {
+    copyLiveBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (page.urlSlug) {
+        copyLiveURL(currentDomain, page.urlSlug);
+      }
     });
   }
 
@@ -805,4 +857,131 @@ async function revealHiddenContent() {
 // Open database page
 function openDatabase() {
   chrome.tabs.create({ url: chrome.runtime.getURL('database.html') });
+}
+
+// ============================================================
+// QUICK ACTIONS - URL Generation
+// ============================================================
+
+// Generate Funnel Edit URL
+function generateEditFunnelURL(funnelId) {
+  return `https://app.checkoutchamp.com/editfunnel/${funnelId}`;
+}
+
+// Generate Page Editor URL
+function generatePageEditorURL(funnelId, pageId) {
+  return `https://app.checkoutchamp.com/webbuilder/v2/${funnelId}/${pageId}`;
+}
+
+// Generate Preview URL
+function generatePreviewURL(funnelId, pageViewId) {
+  if (!pageViewId) {
+    return null;
+  }
+  return `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${pageViewId}.html`;
+}
+
+// Generate Live URL
+function generateLiveURL(domain, urlSlug) {
+  if (!urlSlug) {
+    return null;
+  }
+  // If domain doesn't start with http, add https://
+  const formattedDomain = domain.startsWith('http') ? domain : `https://${domain}`;
+  return `${formattedDomain}/${urlSlug}`;
+}
+
+// Copy to clipboard helper
+async function copyToClipboard(text, successMessage = 'Copied to clipboard!') {
+  try {
+    await navigator.clipboard.writeText(text);
+    showNotification(successMessage);
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    // Fallback method
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      showNotification(successMessage);
+    } catch (e) {
+      alert('Failed to copy to clipboard');
+    }
+    document.body.removeChild(textarea);
+  }
+}
+
+// Show notification
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'copy-notification';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 300);
+  }, 2000);
+}
+
+// Quick Action: Open Edit Funnel
+function openEditFunnel() {
+  if (!funnelData || !funnelData.referenceId) {
+    alert('Funnel data not available');
+    return;
+  }
+  const url = generateEditFunnelURL(funnelData.referenceId);
+  chrome.tabs.create({ url });
+}
+
+// Quick Action: Copy Edit Funnel URL
+function copyEditFunnelURL() {
+  if (!funnelData || !funnelData.referenceId) {
+    alert('Funnel data not available');
+    return;
+  }
+  const url = generateEditFunnelURL(funnelData.referenceId);
+  copyToClipboard(url, 'Funnel editor URL copied!');
+}
+
+// Quick Action: Open Page Editor
+function openPageEditor(funnelId, pageId) {
+  const url = generatePageEditorURL(funnelId, pageId);
+  chrome.tabs.create({ url });
+}
+
+// Quick Action: Copy Page Editor URL
+function copyPageEditorURL(funnelId, pageId) {
+  const url = generatePageEditorURL(funnelId, pageId);
+  copyToClipboard(url, 'Page editor URL copied!');
+}
+
+// Quick Action: Copy Preview URL
+function copyPreviewURL(funnelId, pageViewId) {
+  const url = generatePreviewURL(funnelId, pageViewId);
+  if (!url) {
+    alert('Preview URL not available for this page');
+    return;
+  }
+  copyToClipboard(url, 'Preview URL copied!');
+}
+
+// Quick Action: Copy Live URL
+function copyLiveURL(domain, urlSlug) {
+  const url = generateLiveURL(domain, urlSlug);
+  if (!url) {
+    alert('Live URL not available for this page');
+    return;
+  }
+  copyToClipboard(url, 'Live URL copied!');
 }
