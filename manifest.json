@@ -1,16 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "CheckoutChamp Funnel Navigator",
+  "name": "Funnel Navigator for CheckoutChamp",
   "version": "2.0.0",
-  "description": "Extract and navigate CheckoutChamp funnel pages with database, search, favorites, and A/B test viewing",
+  "description": "Unofficial tool to extract, organize, and navigate CheckoutChamp funnel pages with database, search, favorites, and A/B test viewing",
+  "author": "Your Name",
   "permissions": [
     "activeTab",
     "storage",
     "scripting"
   ],
   "host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "https://*.checkoutchamp.com/*",
+    "https://*.thisisatestsiteonly.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -22,7 +27,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://*.checkoutchamp.com/*",
+        "https://*.thisisatestsiteonly.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

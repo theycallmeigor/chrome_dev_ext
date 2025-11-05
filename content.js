@@ -1,5 +1,6 @@
 // Content script to access sessionStorage and extract funnelData
 // This runs in the context of the webpage
+// Only extracts data from CheckoutChamp funnel pages (looks for funnelData in sessionStorage)
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
