@@ -5,6 +5,7 @@ let currentDomain = '';
 let pages = [];
 let historicalData = {};
 let favorites = { funnels: {}, pages: {} };
+let ownedFunnels = {};
 let newPagesSet = new Set();
 let popupFilters = {
   pageType: 'all',
@@ -43,11 +44,14 @@ const showABTestsOnlyPopup = document.getElementById('showABTestsOnlyPopup');
 const showNewOnlyPopup = document.getElementById('showNewOnlyPopup');
 const editFunnelBtn = document.getElementById('editFunnelBtn');
 const copyEditFunnelBtn = document.getElementById('copyEditFunnelBtn');
+const markAsMyFunnelCheckbox = document.getElementById('markAsMyFunnel');
+const quickActionsSection = document.getElementById('quickActionsSection');
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   await loadHistoricalData();
   await loadFavorites();
+  await loadOwnedFunnels();
   await loadFilterPreferences();
   await fetchFunnelData();
 
@@ -64,6 +68,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Add quick action event listeners
   editFunnelBtn.addEventListener('click', openEditFunnel);
   copyEditFunnelBtn.addEventListener('click', copyEditFunnelURL);
+
+  // Add ownership toggle listener
+  markAsMyFunnelCheckbox.addEventListener('change', handleOwnershipToggle);
 });
 
 // Fetch funnel data from content script
@@ -147,6 +154,10 @@ function processFunnelData() {
       newPagesIndicatorEl.classList.add('hidden');
     }, 5000);
   }
+
+  // Update ownership toggle and Quick Actions visibility
+  updateOwnershipToggle();
+  updateQuickActionsVisibility();
 }
 
 // Display funnel information
@@ -189,6 +200,12 @@ function displayPages(newPages) {
     const pageEl = createPageElement(page, index, newPages.has(page.referenceId));
     pagesListEl.appendChild(pageEl);
   });
+
+  // Update edit button visibility based on ownership
+  if (funnelData && funnelData.referenceId) {
+    const isOwned = ownedFunnels[funnelData.referenceId];
+    updatePageEditButtonsVisibility(isOwned);
+  }
 }
 
 // Create page element
@@ -403,6 +420,79 @@ async function loadFavorites() {
 // Save favorites to Chrome storage
 async function saveFavorites() {
   await chrome.storage.local.set({ favorites });
+}
+
+// Load owned funnels from Chrome storage
+async function loadOwnedFunnels() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['ownedFunnels'], (result) => {
+      ownedFunnels = result.ownedFunnels || {};
+      resolve();
+    });
+  });
+}
+
+// Save owned funnels to Chrome storage
+async function saveOwnedFunnels() {
+  await chrome.storage.local.set({ ownedFunnels });
+}
+
+// Toggle funnel ownership
+async function toggleFunnelOwnership(funnelId) {
+  if (ownedFunnels[funnelId]) {
+    delete ownedFunnels[funnelId];
+  } else {
+    ownedFunnels[funnelId] = {
+      name: funnelData?.name || 'Unnamed Funnel',
+      markedAt: new Date().toISOString()
+    };
+  }
+  await saveOwnedFunnels();
+  updateQuickActionsVisibility();
+}
+
+// Handle ownership toggle change
+async function handleOwnershipToggle() {
+  if (!funnelData || !funnelData.referenceId) return;
+  await toggleFunnelOwnership(funnelData.referenceId);
+}
+
+// Update ownership toggle state
+function updateOwnershipToggle() {
+  if (!funnelData || !funnelData.referenceId) return;
+  const isOwned = ownedFunnels[funnelData.referenceId];
+  markAsMyFunnelCheckbox.checked = isOwned;
+}
+
+// Update Quick Actions visibility based on ownership
+function updateQuickActionsVisibility() {
+  if (!funnelData || !funnelData.referenceId) {
+    quickActionsSection.style.display = 'none';
+    return;
+  }
+
+  const isOwned = ownedFunnels[funnelData.referenceId];
+
+  if (isOwned) {
+    quickActionsSection.style.display = 'block';
+  } else {
+    quickActionsSection.style.display = 'none';
+  }
+
+  // Also update page-level edit buttons visibility
+  updatePageEditButtonsVisibility(isOwned);
+}
+
+// Update visibility of page-level edit buttons
+function updatePageEditButtonsVisibility(isOwned) {
+  const editButtons = document.querySelectorAll('.edit-page-btn, .copy-edit-btn');
+  editButtons.forEach(btn => {
+    if (isOwned) {
+      btn.style.display = '';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
 }
 
 // Load filter preferences

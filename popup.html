@@ -29,8 +29,20 @@
       <h2 id="funnelName"></h2>
       <div id="funnelDetails"></div>
 
+      <!-- Funnel Ownership -->
+      <div class="ownership-section">
+        <label class="ownership-toggle">
+          <input type="checkbox" id="markAsMyFunnel">
+          <span class="ownership-label">
+            <span class="ownership-icon">🔑</span>
+            <span>This is my funnel (I can edit it)</span>
+          </span>
+        </label>
+        <div class="ownership-hint">Enable Quick Actions for editing</div>
+      </div>
+
       <!-- Quick Actions -->
-      <div class="quick-actions-section">
+      <div class="quick-actions-section" id="quickActionsSection">
         <h3>Quick Actions</h3>
         <div class="quick-actions-grid">
           <button id="editFunnelBtn" class="quick-action-btn" title="Open funnel editor">
