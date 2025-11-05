@@ -4,6 +4,14 @@ let funnelData = null;
 let currentDomain = '';
 let pages = [];
 let historicalData = {};
+let favorites = { funnels: {}, pages: {} };
+let newPagesSet = new Set();
+let popupFilters = {
+  pageType: 'all',
+  favoritesOnly: false,
+  abTestsOnly: false,
+  newOnly: false
+};
 
 // DOM elements
 const loadingEl = document.getElementById('loading');
@@ -29,15 +37,27 @@ const closeHistoryModalBtn = document.getElementById('closeHistoryModal');
 const importFileInputEl = document.getElementById('importFileInput');
 const showHiddenContentBtn = document.getElementById('showHiddenContent');
 const openDatabaseBtn = document.getElementById('openDatabase');
+const pageTypeFilterPopup = document.getElementById('pageTypeFilterPopup');
+const showFavoritesOnlyPopup = document.getElementById('showFavoritesOnlyPopup');
+const showABTestsOnlyPopup = document.getElementById('showABTestsOnlyPopup');
+const showNewOnlyPopup = document.getElementById('showNewOnlyPopup');
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   await loadHistoricalData();
+  await loadFavorites();
+  await loadFilterPreferences();
   await fetchFunnelData();
 
   // Add event listeners for new buttons
   showHiddenContentBtn.addEventListener('click', revealHiddenContent);
   openDatabaseBtn.addEventListener('click', openDatabase);
+
+  // Add filter event listeners
+  pageTypeFilterPopup.addEventListener('change', handlePopupFilterChange);
+  showFavoritesOnlyPopup.addEventListener('change', handlePopupFilterChange);
+  showABTestsOnlyPopup.addEventListener('change', handlePopupFilterChange);
+  showNewOnlyPopup.addEventListener('change', handlePopupFilterChange);
 });
 
 // Fetch funnel data from content script
@@ -94,7 +114,7 @@ function processFunnelData() {
 
   // Check for new pages
   const funnelId = funnelData.referenceId;
-  const newPages = checkForNewPages(funnelId, pages);
+  newPagesSet = checkForNewPages(funnelId, pages);
 
   // Update historical data
   updateHistoricalData(funnelId, pages);
@@ -151,7 +171,15 @@ function displayFunnelInfo() {
 function displayPages(newPages) {
   pagesListEl.innerHTML = '';
 
-  pages.forEach((page, index) => {
+  // Apply filters to pages
+  const filteredPages = filterPages(pages);
+
+  if (filteredPages.length === 0) {
+    pagesListEl.innerHTML = '<div class="no-results-popup"><p>No pages match the current filters.</p></div>';
+    return;
+  }
+
+  filteredPages.forEach((page, index) => {
     const pageEl = createPageElement(page, index, newPages.has(page.referenceId));
     pagesListEl.appendChild(pageEl);
   });
@@ -160,8 +188,12 @@ function displayPages(newPages) {
 // Create page element
 function createPageElement(page, index, isNew) {
   const pageDiv = document.createElement('div');
-  pageDiv.className = `page-item${isNew ? ' new-page' : ''}`;
-  pageDiv.dataset.pageId = page.referenceId;
+  const funnelId = funnelData.referenceId;
+  const pageId = page.referenceId;
+  const isFavorite = favorites.pages[`${funnelId}:${pageId}`];
+
+  pageDiv.className = `page-item${isNew ? ' new-page' : ''}${isFavorite ? ' favorite' : ''}`;
+  pageDiv.dataset.pageId = pageId;
 
   // Build URL
   let pageUrl = '';
@@ -173,7 +205,6 @@ function createPageElement(page, index, isNew) {
     pageUrl = `${currentDomain}/${page.urlSlug}`;
   } else if (page.pageView && page.pageView[0] && page.pageView[0].referenceId) {
     // Construct preview URL for pages without slug
-    const funnelId = funnelData.referenceId;
     const pageViewId = page.pageView[0].referenceId;
     pageUrl = `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${pageViewId}.html`;
     isPreviewUrl = true;
@@ -214,6 +245,9 @@ function createPageElement(page, index, isNew) {
           <span style="font-size: 11px; color: #999;">Page Type: ${getPageTypeName(page.pageView[0]?.pageType)}</span>
         </div>
       </div>
+      <button class="page-favorite-btn ${isFavorite ? 'active' : ''}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+        ${isFavorite ? '★' : '☆'}
+      </button>
     </div>
     ${pageUrl !== 'No URL available' ? `
     <div class="page-actions">
@@ -229,6 +263,16 @@ function createPageElement(page, index, isNew) {
       e.preventDefault();
       const url = e.target.dataset.url;
       chrome.tabs.create({ url });
+    });
+  }
+
+  // Add click handler for favorite button
+  const favoriteBtn = pageDiv.querySelector('.page-favorite-btn');
+  if (favoriteBtn) {
+    favoriteBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      togglePageFavorite(funnelId, pageId);
     });
   }
 
@@ -292,6 +336,100 @@ async function loadHistoricalData() {
       resolve();
     });
   });
+}
+
+// Load favorites from Chrome storage
+async function loadFavorites() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['favorites'], (result) => {
+      favorites = result.favorites || { funnels: {}, pages: {} };
+      resolve();
+    });
+  });
+}
+
+// Save favorites to Chrome storage
+async function saveFavorites() {
+  await chrome.storage.local.set({ favorites });
+}
+
+// Load filter preferences
+async function loadFilterPreferences() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['popupFilters'], (result) => {
+      if (result.popupFilters) {
+        popupFilters = result.popupFilters;
+        // Apply saved preferences to UI
+        pageTypeFilterPopup.value = popupFilters.pageType;
+        showFavoritesOnlyPopup.checked = popupFilters.favoritesOnly;
+        showABTestsOnlyPopup.checked = popupFilters.abTestsOnly;
+        showNewOnlyPopup.checked = popupFilters.newOnly;
+      }
+      resolve();
+    });
+  });
+}
+
+// Save filter preferences
+async function saveFilterPreferences() {
+  await chrome.storage.local.set({ popupFilters });
+}
+
+// Handle popup filter changes
+function handlePopupFilterChange() {
+  popupFilters.pageType = pageTypeFilterPopup.value;
+  popupFilters.favoritesOnly = showFavoritesOnlyPopup.checked;
+  popupFilters.abTestsOnly = showABTestsOnlyPopup.checked;
+  popupFilters.newOnly = showNewOnlyPopup.checked;
+
+  saveFilterPreferences();
+  displayPages(newPagesSet);
+}
+
+// Toggle page favorite
+async function togglePageFavorite(funnelId, pageId) {
+  const key = `${funnelId}:${pageId}`;
+  if (favorites.pages[key]) {
+    delete favorites.pages[key];
+  } else {
+    favorites.pages[key] = true;
+  }
+  await saveFavorites();
+  displayPages(newPagesSet);
+}
+
+// Filter pages based on current filter settings
+function filterPages(pagesToFilter) {
+  let filtered = [...pagesToFilter];
+
+  // Filter by page type
+  if (popupFilters.pageType !== 'all') {
+    filtered = filtered.filter(page => {
+      const pageType = page.pageView?.[0]?.pageType;
+      return pageType && pageType.toString() === popupFilters.pageType;
+    });
+  }
+
+  // Filter by favorites
+  if (popupFilters.favoritesOnly) {
+    const funnelId = funnelData?.referenceId;
+    filtered = filtered.filter(page => {
+      const key = `${funnelId}:${page.referenceId}`;
+      return favorites.pages[key];
+    });
+  }
+
+  // Filter by A/B tests
+  if (popupFilters.abTestsOnly) {
+    filtered = filtered.filter(page => page.splitEnabled);
+  }
+
+  // Filter by new pages
+  if (popupFilters.newOnly) {
+    filtered = filtered.filter(page => newPagesSet.has(page.referenceId));
+  }
+
+  return filtered;
 }
 
 async function updateHistoricalData(funnelId, pages) {

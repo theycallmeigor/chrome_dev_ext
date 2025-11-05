@@ -28,6 +28,36 @@
     <div id="funnelInfo" class="funnel-info hidden">
       <h2 id="funnelName"></h2>
       <div id="funnelDetails"></div>
+
+      <!-- Filter Controls -->
+      <div class="filter-bar">
+        <div class="filter-controls">
+          <select id="pageTypeFilterPopup" class="filter-select">
+            <option value="all">All Page Types</option>
+            <option value="1">Landing Page</option>
+            <option value="2">Lead Page</option>
+            <option value="3">Upsell</option>
+            <option value="4">Checkout</option>
+            <option value="5">Thank You</option>
+            <option value="14">Static Page</option>
+          </select>
+
+          <label class="checkbox-filter">
+            <input type="checkbox" id="showFavoritesOnlyPopup">
+            <span>Favorites Only</span>
+          </label>
+
+          <label class="checkbox-filter">
+            <input type="checkbox" id="showABTestsOnlyPopup">
+            <span>A/B Tests Only</span>
+          </label>
+
+          <label class="checkbox-filter">
+            <input type="checkbox" id="showNewOnlyPopup">
+            <span>New Pages Only</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div id="loading" class="loading">
