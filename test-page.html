@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Page for Funnel Navigator Extension</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #6366f1;
+      margin-bottom: 20px;
+    }
+    .instructions {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    .success {
+      background: #dcfce7;
+      border-left: 4px solid #10b981;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    button {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #4f46e5;
+    }
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🧪 Funnel Navigator Extension Test Page</h1>
+
+    <div class="instructions">
+      <strong>⚠️ Instructions:</strong>
+      <ol>
+        <li>This page simulates a CheckoutChamp funnel page</li>
+        <li>Click the button below to load test data</li>
+        <li>Then click your extension icon in the Chrome toolbar</li>
+        <li>You should see Campaign Details, Product Info, and pages</li>
+      </ol>
+    </div>
+
+    <button onclick="loadTestData()">📦 Load Test Funnel Data</button>
+
+    <div id="status"></div>
+
+    <h2>What You Should See:</h2>
+    <ul>
+      <li><strong>Campaign Details:</strong> Campaign ID, Funnel ID, Total Pages, Domain</li>
+      <li><strong>Product Information:</strong> Test Product, Price $47.00</li>
+      <li><strong>Pages:</strong> 3 pages sorted by page number (3, 2, 1)</li>
+      <li><strong>Page Numbers:</strong> Each page shows "Page #"</li>
+      <li><strong>Dates:</strong> Last Modified and Last Checked dates</li>
+      <li><strong>A/B Test:</strong> Page 2 has A/B test - click badge to see modal</li>
+    </ul>
+
+    <h2>Test Data Structure:</h2>
+    <pre id="dataPreview"></pre>
+  </div>
+
+  <script>
+    function loadTestData() {
+      const testFunnelData = {
+        "name": "Test Funnel - Sample Campaign",
+        "referenceId": "funnel_12345",
+        "campaign": "campaign_67890",
+        "pages": [
+          {
+            "referenceId": "page_001",
+            "title": "Landing Page",
+            "pageNumber": 1,
+            "urlSlug": "landing-page",
+            "splitEnabled": false,
+            "createdAt": "2025-11-01T10:00:00Z",
+            "updatedAt": "2025-11-05T08:30:00Z",
+            "pageView": [
+              {
+                "referenceId": "pageview_001_a",
+                "pageType": 1
+              }
+            ],
+            "product": {
+              "name": "Test Product - Basic Package",
+              "referenceId": "product_123",
+              "price": "47.00"
+            }
+          },
+          {
+            "referenceId": "page_002",
+            "title": "Checkout Page",
+            "pageNumber": 2,
+            "urlSlug": "checkout",
+            "splitEnabled": true,
+            "createdAt": "2025-11-01T11:00:00Z",
+            "updatedAt": "2025-11-04T15:20:00Z",
+            "pageView": [
+              {
+                "referenceId": "pageview_002_a",
+                "pageType": 4,
+                "splitPercentage": 60
+              },
+              {
+                "referenceId": "pageview_002_b",
+                "pageType": 4,
+                "splitPercentage": 40
+              }
+            ],
+            "products": [
+              {
+                "name": "Test Product - Basic Package",
+                "referenceId": "product_123",
+                "price": "47.00"
+              }
+            ]
+          },
+          {
+            "referenceId": "page_003",
+            "title": "Thank You Page",
+            "pageNumber": 3,
+            "urlSlug": "thank-you",
+            "splitEnabled": false,
+            "createdAt": "2025-11-01T12:00:00Z",
+            "updatedAt": "2025-11-03T09:15:00Z",
+            "pageView": [
+              {
+                "referenceId": "pageview_003_a",
+                "pageType": 5
+              }
+            ]
+          }
+        ]
+      };
+
+      // Store in sessionStorage (mimics CheckoutChamp behavior)
+      sessionStorage.setItem('funnelData', JSON.stringify(testFunnelData));
+
+      // Show success message
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `
+        <div class="success">
+          <strong>✅ Success!</strong><br>
+          Test funnel data loaded into sessionStorage.<br>
+          Now click your extension icon in the Chrome toolbar!
+        </div>
+      `;
+
+      // Show data preview
+      document.getElementById('dataPreview').textContent = JSON.stringify(testFunnelData, null, 2);
+    }
+
+    // Auto-load on page load for convenience
+    window.addEventListener('load', () => {
+      loadTestData();
+    });
+  </script>
+</body>
+</html>
