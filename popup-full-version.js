@@ -7,6 +7,7 @@ let historicalData = {};
 let favorites = { funnels: {}, pages: {} };
 let ownedFunnels = {};
 let newPagesSet = new Set();
+let pageViewHistory = {}; // Track when pages were last checked
 let popupFilters = {
   pageType: 'all',
   favoritesOnly: false,
@@ -19,8 +20,12 @@ const loadingEl = document.getElementById('loading');
 const errorEl = document.getElementById('error');
 const funnelInfoEl = document.getElementById('funnelInfo');
 const funnelNameEl = document.getElementById('funnelName');
-const funnelDetailsEl = document.getElementById('funnelDetails');
+const campaignDetailsEl = document.getElementById('campaignDetails');
+const productInfoEl = document.getElementById('productInfo');
 const pagesListEl = document.getElementById('pagesList');
+const abTestModal = document.getElementById('abTestModal');
+const abTestContent = document.getElementById('abTestContent');
+const closeABModalBtn = document.getElementById('closeABModal');
 const selectAllCheckbox = document.getElementById('selectAll');
 const openSelectedBtn = document.getElementById('openSelected');
 const openAllBtn = document.getElementById('openAll');
@@ -50,6 +55,10 @@ const quickActionsSection = document.getElementById('quickActionsSection');
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
+  // Load page view history from storage
+  const result = await chrome.storage.local.get(['pageViewHistory']);
+  pageViewHistory = result.pageViewHistory || {};
+
   await loadHistoricalData();
   await loadFavorites();
   await loadOwnedFunnels();
@@ -73,6 +82,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Add ownership toggle listener
   markAsMyFunnelCheckbox.addEventListener('change', handleOwnershipToggle);
+
+  // Add A/B test modal listeners
+  closeABModalBtn?.addEventListener('click', closeABTestModal);
+  abTestModal?.querySelector('.modal-overlay')?.addEventListener('click', closeABTestModal);
 });
 
 // Fetch funnel data from content script
@@ -125,7 +138,12 @@ function processFunnelData() {
     return;
   }
 
-  pages = funnelData.pages;
+  // Sort pages by page number (highest to lowest)
+  pages = funnelData.pages.sort((a, b) => {
+    const pageNumA = parseInt(a.pageNumber) || 0;
+    const pageNumB = parseInt(b.pageNumber) || 0;
+    return pageNumB - pageNumA; // Descending order
+  });
 
   // Check for new pages
   const funnelId = funnelData.referenceId;
@@ -166,24 +184,69 @@ function processFunnelData() {
 function displayFunnelInfo() {
   funnelNameEl.textContent = funnelData.name || 'Unnamed Funnel';
 
-  const details = `
-    <div class="stats">
-      <div class="stat-item">
-        <span class="stat-label">Campaign ID:</span>
-        <span>${funnelData.campaign || 'N/A'}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Total Pages:</span>
-        <span>${pages.length}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">A/B Tests:</span>
-        <span>${pages.filter(p => p.splitEnabled).length}</span>
-      </div>
+  // Campaign Details
+  const campaignDetails = `
+    <div class="info-row">
+      <span class="info-label">Campaign ID:</span>
+      <span class="info-value">${funnelData.campaign || 'N/A'}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Funnel ID:</span>
+      <span class="info-value">${funnelData.referenceId || 'N/A'}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Total Pages:</span>
+      <span class="info-value">${pages.length}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">A/B Tests:</span>
+      <span class="info-value">${pages.filter(p => p.splitEnabled).length}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Domain:</span>
+      <span class="info-value">${currentDomain || 'N/A'}</span>
     </div>
   `;
+  campaignDetailsEl.innerHTML = campaignDetails;
 
-  funnelDetailsEl.innerHTML = details;
+  // Product Information (from first page if available)
+  const firstPage = pages[0];
+  let productHTML = '<div class="info-row"><span class="info-value">No product information available</span></div>';
+
+  if (firstPage && firstPage.product) {
+    productHTML = `
+      <div class="info-row">
+        <span class="info-label">Product Name:</span>
+        <span class="info-value">${firstPage.product.name || 'N/A'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Product ID:</span>
+        <span class="info-value">${firstPage.product.referenceId || 'N/A'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Price:</span>
+        <span class="info-value">$${firstPage.product.price || '0.00'}</span>
+      </div>
+    `;
+  } else if (firstPage && firstPage.products && firstPage.products.length > 0) {
+    const product = firstPage.products[0];
+    productHTML = `
+      <div class="info-row">
+        <span class="info-label">Product Name:</span>
+        <span class="info-value">${product.name || 'N/A'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Product ID:</span>
+        <span class="info-value">${product.referenceId || 'N/A'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Price:</span>
+        <span class="info-value">$${product.price || '0.00'}</span>
+      </div>
+    `;
+  }
+
+  productInfoEl.innerHTML = productHTML;
 }
 
 // Display pages list
@@ -237,13 +300,28 @@ function createPageElement(page, index, isNew) {
     pageUrl = 'No URL available';
   }
 
+  // Get page number
+  const pageNum = page.pageNumber || 'N/A';
+
+  // Get dates
+  const lastModified = page.updatedAt || page.createdAt;
+  const lastChecked = pageViewHistory[page.referenceId];
+
+  // Format dates
+  const modifiedDate = lastModified ? formatDate(lastModified) : 'Unknown';
+  const checkedDate = lastChecked ? formatDate(lastChecked) : 'Never';
+
+  // Update last checked time to now
+  pageViewHistory[page.referenceId] = new Date().toISOString();
+  chrome.storage.local.set({ pageViewHistory });
+
   // Build badges
   let badges = '';
   if (isNew) {
     badges += '<span class="badge badge-new">NEW</span>';
   }
   if (page.splitEnabled) {
-    badges += '<span class="badge badge-split active">A/B Testing</span>';
+    badges += '<span class="badge badge-split active clickable" data-page-index="' + index + '">A/B Testing</span>';
   }
   if (page.externalURL) {
     badges += '<span class="badge badge-external">External</span>';
@@ -262,12 +340,23 @@ function createPageElement(page, index, isNew) {
       </div>
       <div class="page-info">
         <div class="page-title">
+          <span class="page-number">Page ${pageNum}</span>
           <span>${page.title || 'Untitled Page'}</span>
           ${badges}
         </div>
         ${pageUrl !== 'No URL available' ? `<div class="page-url">${pageUrl}</div>` : '<div class="page-url" style="color: #999;">No URL available</div>'}
         <div class="page-meta">
           <span style="font-size: 11px; color: #999;">Page Type: ${getPageTypeName(page.pageView[0]?.pageType)}</span>
+        </div>
+        <div class="page-dates">
+          <div class="date-item">
+            <span class="date-label">Last Modified:</span>
+            <span class="date-value">${modifiedDate}</span>
+          </div>
+          <div class="date-item">
+            <span class="date-label">Last Checked:</span>
+            <span class="date-value">${checkedDate}</span>
+          </div>
         </div>
       </div>
       <button class="page-favorite-btn ${isFavorite ? 'active' : ''}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
@@ -344,6 +433,15 @@ function createPageElement(page, index, isNew) {
       if (page.urlSlug) {
         copyLiveURL(currentDomain, page.urlSlug);
       }
+    });
+  }
+
+  // Add click handler for A/B test badge
+  if (page.splitEnabled) {
+    const abBadge = pageDiv.querySelector('.badge-split.clickable');
+    abBadge?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showABTestModal(page);
     });
   }
 
@@ -1081,4 +1179,103 @@ function copyLiveURL(domain, urlSlug) {
     return;
   }
   copyToClipboard(url, 'Live URL copied!');
+}
+
+// Format date to readable format
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  // Show relative time for recent dates
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+
+  // Show full date for older dates
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+  });
+}
+
+// Show A/B Test Modal
+function showABTestModal(page) {
+  if (!page.pageView || page.pageView.length < 2) {
+    alert('No A/B test data available');
+    return;
+  }
+
+  const pageViews = page.pageView;
+  const funnelId = funnelData.referenceId;
+
+  let modalHTML = '<div class="ab-test-variants">';
+
+  pageViews.forEach((variant, index) => {
+    const variantLetter = String.fromCharCode(65 + index); // A, B, C, etc.
+    const pageType = getPageTypeName(variant.pageType);
+    const previewURL = `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${variant.referenceId}.html`;
+    const editURL = `https://app.checkoutchamp.com/webbuilder/v2/${funnelId}/${page.referenceId}?variant=${variant.referenceId}`;
+
+    modalHTML += `
+      <div class="variant-card">
+        <div class="variant-header">
+          <h4>Variant ${variantLetter}</h4>
+          <span class="badge badge-type">${pageType}</span>
+        </div>
+        <div class="variant-info">
+          <div class="info-row">
+            <span class="info-label">Page View ID:</span>
+            <span class="info-value">${variant.referenceId}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Split Traffic:</span>
+            <span class="info-value">${variant.splitPercentage || '50'}%</span>
+          </div>
+        </div>
+        <div class="variant-actions">
+          <button class="action-btn small primary" data-url="${editURL}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            Edit
+          </button>
+          <button class="action-btn small accent" data-url="${previewURL}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            Preview
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  modalHTML += '</div>';
+
+  abTestContent.innerHTML = modalHTML;
+  abTestModal.classList.remove('hidden');
+
+  // Add click handlers for action buttons
+  abTestContent.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const url = btn.getAttribute('data-url');
+      if (url) chrome.tabs.create({ url });
+    });
+  });
+}
+
+// Close A/B Test Modal
+function closeABTestModal() {
+  abTestModal.classList.add('hidden');
 }

@@ -490,3 +490,231 @@ body {
 .pages-list::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
+
+/* ============================================================
+   INFO SECTIONS (Campaign Details & Product Info)
+   ============================================================ */
+
+.info-section {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: 13px;
+}
+
+.info-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.info-value {
+  color: var(--text);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ============================================================
+   PAGE DETAILS WITH DATES
+   ============================================================ */
+
+.page-title-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex: 1;
+}
+
+.page-number {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  background: #ede9fe;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.page-dates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--border);
+}
+
+.date-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.date-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.date-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ============================================================
+   CLICKABLE A/B TEST BADGE
+   ============================================================ */
+
+.badge.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.badge.clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  background: #fde047;
+}
+
+.badge.clickable:active {
+  transform: translateY(0);
+}
+
+/* ============================================================
+   MODAL FOR A/B TEST DETAILS
+   ============================================================ */
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.modal-content {
+  position: relative;
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  z-index: 2001;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 32px;
+  font-weight: 300;
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text);
+}
+
+.modal-body {
+  padding: var(--spacing-lg);
+}
+
+/* A/B Test Variants */
+.ab-test-variants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.variant-card {
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.variant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.variant-header h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.variant-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.variant-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.action-btn.small {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 13px;
+}

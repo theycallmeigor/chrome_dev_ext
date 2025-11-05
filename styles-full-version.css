@@ -780,3 +780,255 @@ header h1 {
   gap: 6px;
   flex-wrap: wrap;
 }
+
+/* ============================================================
+   INFO SECTIONS (Campaign Details & Product Info)
+   ============================================================ */
+
+.info-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.info-section .section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.info-label {
+  color: #6b7280;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.info-value {
+  color: #111827;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ============================================================
+   PAGE DETAILS WITH DATES
+   ============================================================ */
+
+.page-number {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6366f1;
+  background: #ede9fe;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.page-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 12px;
+}
+
+.date-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.date-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.date-value {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* ============================================================
+   CLICKABLE A/B TEST BADGE
+   ============================================================ */
+
+.badge.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.badge.clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  background: #fde047;
+}
+
+.badge.clickable:active {
+  transform: translateY(0);
+}
+
+/* ============================================================
+   MODAL FOR A/B TEST DETAILS
+   ============================================================ */
+
+.modal .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 9998;
+}
+
+.modal .modal-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  z-index: 9999;
+}
+
+.modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 14px 14px 0 0;
+}
+
+.modal .modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.modal .close-btn {
+  background: none;
+  border: none;
+  font-size: 32px;
+  font-weight: 300;
+  color: #6b7280;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.modal .close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #111827;
+}
+
+.modal .modal-body {
+  padding: 24px;
+}
+
+/* A/B Test Variants */
+.ab-test-variants {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.variant-card {
+  padding: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.variant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.variant-header h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.variant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.variant-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn.small {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.action-btn.small.primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+}
+
+.action-btn.small.accent {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+}
+
+.action-btn.small:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.action-btn.small:active {
+  transform: translateY(0);
+}

@@ -40,7 +40,22 @@
       <!-- Funnel Info -->
       <div class="funnel-info">
         <h2 id="funnelName" class="funnel-name">Funnel Name</h2>
-        <div id="funnelDetails" class="funnel-details"></div>
+      </div>
+
+      <!-- Campaign Details Section -->
+      <div class="info-section">
+        <h3 class="section-title">Campaign Details</h3>
+        <div id="campaignDetails" class="info-content">
+          <!-- Campaign details will be inserted here -->
+        </div>
+      </div>
+
+      <!-- Product Information Section -->
+      <div class="info-section">
+        <h3 class="section-title">Product Information</h3>
+        <div id="productInfo" class="info-content">
+          <!-- Product info will be inserted here -->
+        </div>
       </div>
 
       <!-- Quick Actions -->
@@ -138,6 +153,20 @@
     <!-- Notification Toast -->
     <div id="toast" class="toast hidden">
       <span id="toastMessage"></span>
+    </div>
+
+    <!-- A/B Test Modal -->
+    <div id="abTestModal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>A/B Test Details</h3>
+          <button id="closeModal" class="close-btn">×</button>
+        </div>
+        <div id="abTestContent" class="modal-body">
+          <!-- A/B test details will be inserted here -->
+        </div>
+      </div>
     </div>
 
   </div>
