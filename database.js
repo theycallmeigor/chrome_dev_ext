@@ -4,6 +4,7 @@ let historicalData = {};
 let favorites = { funnels: {}, pages: {} };
 let currentFilters = {
   search: '',
+  store: 'all',
   pageType: 'all',
   sortOrder: 'newest',
   favoritesOnly: false,
@@ -12,6 +13,7 @@ let currentFilters = {
 
 // DOM elements
 const searchInput = document.getElementById('searchInput');
+const storeFilter = document.getElementById('storeFilter');
 const pageTypeFilter = document.getElementById('pageTypeFilter');
 const sortOrder = document.getElementById('sortOrder');
 const showFavoritesOnly = document.getElementById('showFavoritesOnly');
@@ -34,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Event listeners
   searchInput.addEventListener('input', handleSearch);
+  storeFilter.addEventListener('change', handleFilterChange);
   pageTypeFilter.addEventListener('change', handleFilterChange);
   sortOrder.addEventListener('change', handleFilterChange);
   showFavoritesOnly.addEventListener('change', handleFilterChange);
@@ -99,12 +102,14 @@ function exportAllData() {
 // Clear all filters
 function clearAllFilters() {
   searchInput.value = '';
+  storeFilter.value = 'all';
   pageTypeFilter.value = 'all';
   sortOrder.value = 'newest';
   showFavoritesOnly.checked = false;
   showABTestsOnly.checked = false;
   currentFilters = {
     search: '',
+    store: 'all',
     pageType: 'all',
     sortOrder: 'newest',
     favoritesOnly: false,
@@ -121,6 +126,7 @@ function handleSearch() {
 
 // Handle filter change
 function handleFilterChange() {
+  currentFilters.store = storeFilter.value;
   currentFilters.pageType = pageTypeFilter.value;
   currentFilters.sortOrder = sortOrder.value;
   currentFilters.favoritesOnly = showFavoritesOnly.checked;
@@ -153,12 +159,43 @@ function formatDate(isoString) {
   });
 }
 
+// Populate store filter with unique domains
+function populateStoreFilter() {
+  const stores = new Set();
+  Object.values(historicalData).forEach(funnel => {
+    if (funnel.domain) {
+      stores.add(funnel.domain);
+    }
+  });
+
+  // Clear existing options except "All Stores"
+  storeFilter.innerHTML = '<option value="all">All Stores</option>';
+
+  // Add store options
+  Array.from(stores).sort().forEach(domain => {
+    const option = document.createElement('option');
+    option.value = domain;
+    try {
+      const url = new URL(domain);
+      option.textContent = url.hostname;
+    } catch (e) {
+      option.textContent = domain;
+    }
+    storeFilter.appendChild(option);
+  });
+}
+
 // Filter and sort funnels
 function filterAndSortFunnels() {
   let funnels = Object.entries(historicalData).map(([id, data]) => ({
     id,
     ...data
   }));
+
+  // Filter by store/domain
+  if (currentFilters.store !== 'all') {
+    funnels = funnels.filter(f => f.domain === currentFilters.store);
+  }
 
   // Filter by favorites
   if (currentFilters.favoritesOnly) {
@@ -253,17 +290,19 @@ async function togglePageFavorite(funnelId, pageId) {
 
 // Build page URL
 function buildPageURL(page, funnelId, funnelData) {
-  // Need to get domain from somewhere - for now return placeholder
-  const domain = 'https://example.com'; // This should be stored or inferred
+  // Get domain from stored funnel data
+  const domain = funnelData.domain || 'https://example.com';
 
   if (page.externalURL) {
     return page.externalURL;
   } else if (page.urlSlug) {
     return `${domain}/${page.urlSlug}`;
+  } else if (page.referenceId) {
+    // Preview URL using stored referenceId
+    return `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${page.referenceId}.html`;
   } else {
-    // Preview URL
-    const pageViewId = page.referenceId; // Adjust as needed
-    return `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${pageViewId}.html`;
+    // Fallback
+    return `${domain}/page`;
   }
 }
 
@@ -388,6 +427,9 @@ function showABTestComparison(funnelId, pageId) {
 
 // Render database
 function renderDatabase() {
+  // Populate store filter
+  populateStoreFilter();
+
   const funnels = filterAndSortFunnels();
 
   // Update stats

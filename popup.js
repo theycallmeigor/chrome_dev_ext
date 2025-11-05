@@ -4,6 +4,15 @@ let funnelData = null;
 let currentDomain = '';
 let pages = [];
 let historicalData = {};
+let favorites = { funnels: {}, pages: {} };
+let ownedFunnels = {};
+let newPagesSet = new Set();
+let popupFilters = {
+  pageType: 'all',
+  favoritesOnly: false,
+  abTestsOnly: false,
+  newOnly: false
+};
 
 // DOM elements
 const loadingEl = document.getElementById('loading');
@@ -29,15 +38,39 @@ const closeHistoryModalBtn = document.getElementById('closeHistoryModal');
 const importFileInputEl = document.getElementById('importFileInput');
 const showHiddenContentBtn = document.getElementById('showHiddenContent');
 const openDatabaseBtn = document.getElementById('openDatabase');
+const pageTypeFilterPopup = document.getElementById('pageTypeFilterPopup');
+const showFavoritesOnlyPopup = document.getElementById('showFavoritesOnlyPopup');
+const showABTestsOnlyPopup = document.getElementById('showABTestsOnlyPopup');
+const showNewOnlyPopup = document.getElementById('showNewOnlyPopup');
+const editFunnelBtn = document.getElementById('editFunnelBtn');
+const copyEditFunnelBtn = document.getElementById('copyEditFunnelBtn');
+const markAsMyFunnelCheckbox = document.getElementById('markAsMyFunnel');
+const quickActionsSection = document.getElementById('quickActionsSection');
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   await loadHistoricalData();
+  await loadFavorites();
+  await loadOwnedFunnels();
+  await loadFilterPreferences();
   await fetchFunnelData();
 
   // Add event listeners for new buttons
   showHiddenContentBtn.addEventListener('click', revealHiddenContent);
   openDatabaseBtn.addEventListener('click', openDatabase);
+
+  // Add filter event listeners
+  pageTypeFilterPopup.addEventListener('change', handlePopupFilterChange);
+  showFavoritesOnlyPopup.addEventListener('change', handlePopupFilterChange);
+  showABTestsOnlyPopup.addEventListener('change', handlePopupFilterChange);
+  showNewOnlyPopup.addEventListener('change', handlePopupFilterChange);
+
+  // Add quick action event listeners
+  editFunnelBtn.addEventListener('click', openEditFunnel);
+  copyEditFunnelBtn.addEventListener('click', copyEditFunnelURL);
+
+  // Add ownership toggle listener
+  markAsMyFunnelCheckbox.addEventListener('change', handleOwnershipToggle);
 });
 
 // Fetch funnel data from content script
@@ -94,7 +127,7 @@ function processFunnelData() {
 
   // Check for new pages
   const funnelId = funnelData.referenceId;
-  const newPages = checkForNewPages(funnelId, pages);
+  newPagesSet = checkForNewPages(funnelId, pages);
 
   // Update historical data
   updateHistoricalData(funnelId, pages);
@@ -103,7 +136,7 @@ function processFunnelData() {
   displayFunnelInfo();
 
   // Display pages
-  displayPages(newPages);
+  displayPages(newPagesSet);
 
   // Show success state
   loadingEl.classList.add('hidden');
@@ -115,12 +148,16 @@ function processFunnelData() {
   displayHistoryStats();
 
   // Show new pages indicator if any
-  if (newPages.size > 0) {
+  if (newPagesSet.size > 0) {
     newPagesIndicatorEl.classList.remove('hidden');
     setTimeout(() => {
       newPagesIndicatorEl.classList.add('hidden');
     }, 5000);
   }
+
+  // Update ownership toggle and Quick Actions visibility
+  updateOwnershipToggle();
+  updateQuickActionsVisibility();
 }
 
 // Display funnel information
@@ -151,17 +188,35 @@ function displayFunnelInfo() {
 function displayPages(newPages) {
   pagesListEl.innerHTML = '';
 
-  pages.forEach((page, index) => {
+  // Apply filters to pages
+  const filteredPages = filterPages(pages);
+
+  if (filteredPages.length === 0) {
+    pagesListEl.innerHTML = '<div class="no-results-popup"><p>No pages match the current filters.</p></div>';
+    return;
+  }
+
+  filteredPages.forEach((page, index) => {
     const pageEl = createPageElement(page, index, newPages.has(page.referenceId));
     pagesListEl.appendChild(pageEl);
   });
+
+  // Update edit button visibility based on ownership
+  if (funnelData && funnelData.referenceId) {
+    const isOwned = ownedFunnels[funnelData.referenceId];
+    updatePageEditButtonsVisibility(isOwned);
+  }
 }
 
 // Create page element
 function createPageElement(page, index, isNew) {
   const pageDiv = document.createElement('div');
-  pageDiv.className = `page-item${isNew ? ' new-page' : ''}`;
-  pageDiv.dataset.pageId = page.referenceId;
+  const funnelId = funnelData.referenceId;
+  const pageId = page.referenceId;
+  const isFavorite = favorites.pages[`${funnelId}:${pageId}`];
+
+  pageDiv.className = `page-item${isNew ? ' new-page' : ''}${isFavorite ? ' favorite' : ''}`;
+  pageDiv.dataset.pageId = pageId;
 
   // Build URL
   let pageUrl = '';
@@ -173,7 +228,6 @@ function createPageElement(page, index, isNew) {
     pageUrl = `${currentDomain}/${page.urlSlug}`;
   } else if (page.pageView && page.pageView[0] && page.pageView[0].referenceId) {
     // Construct preview URL for pages without slug
-    const funnelId = funnelData.referenceId;
     const pageViewId = page.pageView[0].referenceId;
     pageUrl = `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${pageViewId}.html`;
     isPreviewUrl = true;
@@ -214,12 +268,23 @@ function createPageElement(page, index, isNew) {
           <span style="font-size: 11px; color: #999;">Page Type: ${getPageTypeName(page.pageView[0]?.pageType)}</span>
         </div>
       </div>
+      <button class="page-favorite-btn ${isFavorite ? 'active' : ''}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+        ${isFavorite ? '★' : '☆'}
+      </button>
     </div>
-    ${pageUrl !== 'No URL available' ? `
     <div class="page-actions">
-      <button class="btn btn-primary btn-small open-page-btn" data-url="${pageUrl}">Open Page</button>
+      ${pageUrl !== 'No URL available' ? `
+        <button class="btn btn-primary btn-small open-page-btn" data-url="${pageUrl}">Open Page</button>
+      ` : ''}
+      <button class="btn btn-secondary btn-small edit-page-btn" title="Edit page in web builder">✏️ Edit</button>
+      <button class="btn-icon btn-small copy-edit-btn" title="Copy page editor URL">📋</button>
+      ${page.pageView?.[0]?.referenceId ? `
+        <button class="btn-icon btn-small copy-preview-btn" title="Copy preview URL">🔗</button>
+      ` : ''}
+      ${page.urlSlug ? `
+        <button class="btn-icon btn-small copy-live-btn" title="Copy live URL">🌐</button>
+      ` : ''}
     </div>
-    ` : ''}
   `;
 
   // Add click handler for individual page open
@@ -229,6 +294,54 @@ function createPageElement(page, index, isNew) {
       e.preventDefault();
       const url = e.target.dataset.url;
       chrome.tabs.create({ url });
+    });
+  }
+
+  // Add click handler for favorite button
+  const favoriteBtn = pageDiv.querySelector('.page-favorite-btn');
+  if (favoriteBtn) {
+    favoriteBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      togglePageFavorite(funnelId, pageId);
+    });
+  }
+
+  // Add click handlers for quick action buttons
+  const editPageBtn = pageDiv.querySelector('.edit-page-btn');
+  if (editPageBtn) {
+    editPageBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openPageEditor(funnelId, pageId);
+    });
+  }
+
+  const copyEditBtn = pageDiv.querySelector('.copy-edit-btn');
+  if (copyEditBtn) {
+    copyEditBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      copyPageEditorURL(funnelId, pageId);
+    });
+  }
+
+  const copyPreviewBtn = pageDiv.querySelector('.copy-preview-btn');
+  if (copyPreviewBtn) {
+    copyPreviewBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const pageViewId = page.pageView?.[0]?.referenceId;
+      if (pageViewId) {
+        copyPreviewURL(funnelId, pageViewId);
+      }
+    });
+  }
+
+  const copyLiveBtn = pageDiv.querySelector('.copy-live-btn');
+  if (copyLiveBtn) {
+    copyLiveBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (page.urlSlug) {
+        copyLiveURL(currentDomain, page.urlSlug);
+      }
     });
   }
 
@@ -294,13 +407,184 @@ async function loadHistoricalData() {
   });
 }
 
+// Load favorites from Chrome storage
+async function loadFavorites() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['favorites'], (result) => {
+      favorites = result.favorites || { funnels: {}, pages: {} };
+      resolve();
+    });
+  });
+}
+
+// Save favorites to Chrome storage
+async function saveFavorites() {
+  await chrome.storage.local.set({ favorites });
+}
+
+// Load owned funnels from Chrome storage
+async function loadOwnedFunnels() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['ownedFunnels'], (result) => {
+      ownedFunnels = result.ownedFunnels || {};
+      resolve();
+    });
+  });
+}
+
+// Save owned funnels to Chrome storage
+async function saveOwnedFunnels() {
+  await chrome.storage.local.set({ ownedFunnels });
+}
+
+// Toggle funnel ownership
+async function toggleFunnelOwnership(funnelId) {
+  if (ownedFunnels[funnelId]) {
+    delete ownedFunnels[funnelId];
+  } else {
+    ownedFunnels[funnelId] = {
+      name: funnelData?.name || 'Unnamed Funnel',
+      markedAt: new Date().toISOString()
+    };
+  }
+  await saveOwnedFunnels();
+  updateQuickActionsVisibility();
+}
+
+// Handle ownership toggle change
+async function handleOwnershipToggle() {
+  if (!funnelData || !funnelData.referenceId) return;
+  await toggleFunnelOwnership(funnelData.referenceId);
+}
+
+// Update ownership toggle state
+function updateOwnershipToggle() {
+  if (!funnelData || !funnelData.referenceId) return;
+  const isOwned = ownedFunnels[funnelData.referenceId];
+  markAsMyFunnelCheckbox.checked = isOwned;
+}
+
+// Update Quick Actions visibility based on ownership
+function updateQuickActionsVisibility() {
+  if (!funnelData || !funnelData.referenceId) {
+    quickActionsSection.style.display = 'none';
+    return;
+  }
+
+  const isOwned = ownedFunnels[funnelData.referenceId];
+
+  if (isOwned) {
+    quickActionsSection.style.display = 'block';
+  } else {
+    quickActionsSection.style.display = 'none';
+  }
+
+  // Also update page-level edit buttons visibility
+  updatePageEditButtonsVisibility(isOwned);
+}
+
+// Update visibility of page-level edit buttons
+function updatePageEditButtonsVisibility(isOwned) {
+  const editButtons = document.querySelectorAll('.edit-page-btn, .copy-edit-btn');
+  editButtons.forEach(btn => {
+    if (isOwned) {
+      btn.style.display = '';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+}
+
+// Load filter preferences
+async function loadFilterPreferences() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['popupFilters'], (result) => {
+      if (result.popupFilters) {
+        popupFilters = result.popupFilters;
+        // Apply saved preferences to UI
+        pageTypeFilterPopup.value = popupFilters.pageType;
+        showFavoritesOnlyPopup.checked = popupFilters.favoritesOnly;
+        showABTestsOnlyPopup.checked = popupFilters.abTestsOnly;
+        showNewOnlyPopup.checked = popupFilters.newOnly;
+      }
+      resolve();
+    });
+  });
+}
+
+// Save filter preferences
+async function saveFilterPreferences() {
+  await chrome.storage.local.set({ popupFilters });
+}
+
+// Handle popup filter changes
+function handlePopupFilterChange() {
+  popupFilters.pageType = pageTypeFilterPopup.value;
+  popupFilters.favoritesOnly = showFavoritesOnlyPopup.checked;
+  popupFilters.abTestsOnly = showABTestsOnlyPopup.checked;
+  popupFilters.newOnly = showNewOnlyPopup.checked;
+
+  saveFilterPreferences();
+  displayPages(newPagesSet);
+}
+
+// Toggle page favorite
+async function togglePageFavorite(funnelId, pageId) {
+  const key = `${funnelId}:${pageId}`;
+  if (favorites.pages[key]) {
+    delete favorites.pages[key];
+  } else {
+    favorites.pages[key] = true;
+  }
+  await saveFavorites();
+  displayPages(newPagesSet);
+}
+
+// Filter pages based on current filter settings
+function filterPages(pagesToFilter) {
+  let filtered = [...pagesToFilter];
+
+  // Filter by page type
+  if (popupFilters.pageType !== 'all') {
+    filtered = filtered.filter(page => {
+      const pageType = page.pageView?.[0]?.pageType;
+      return pageType && pageType.toString() === popupFilters.pageType;
+    });
+  }
+
+  // Filter by favorites
+  if (popupFilters.favoritesOnly) {
+    const funnelId = funnelData?.referenceId;
+    filtered = filtered.filter(page => {
+      const key = `${funnelId}:${page.referenceId}`;
+      return favorites.pages[key];
+    });
+  }
+
+  // Filter by A/B tests
+  if (popupFilters.abTestsOnly) {
+    filtered = filtered.filter(page => page.splitEnabled);
+  }
+
+  // Filter by new pages
+  if (popupFilters.newOnly) {
+    filtered = filtered.filter(page => newPagesSet.has(page.referenceId));
+  }
+
+  return filtered;
+}
+
 async function updateHistoricalData(funnelId, pages) {
   if (!historicalData[funnelId]) {
     historicalData[funnelId] = {
       name: funnelData.name,
+      domain: currentDomain,
       firstSeen: new Date().toISOString(),
       pages: {}
     };
+  } else {
+    // Update domain if it has changed
+    historicalData[funnelId].domain = currentDomain;
   }
 
   pages.forEach(page => {
@@ -308,12 +592,21 @@ async function updateHistoricalData(funnelId, pages) {
       historicalData[funnelId].pages[page.referenceId] = {
         title: page.title,
         urlSlug: page.urlSlug,
+        externalURL: page.externalURL,
+        referenceId: page.pageView?.[0]?.referenceId,
         firstSeen: new Date().toISOString(),
         splitEnabled: page.splitEnabled
       };
     } else {
       // Update split status if changed
       historicalData[funnelId].pages[page.referenceId].splitEnabled = page.splitEnabled;
+      // Update externalURL and referenceId if they exist
+      if (page.externalURL) {
+        historicalData[funnelId].pages[page.referenceId].externalURL = page.externalURL;
+      }
+      if (page.pageView?.[0]?.referenceId) {
+        historicalData[funnelId].pages[page.referenceId].referenceId = page.pageView[0].referenceId;
+      }
     }
   });
 
@@ -654,4 +947,131 @@ async function revealHiddenContent() {
 // Open database page
 function openDatabase() {
   chrome.tabs.create({ url: chrome.runtime.getURL('database.html') });
+}
+
+// ============================================================
+// QUICK ACTIONS - URL Generation
+// ============================================================
+
+// Generate Funnel Edit URL
+function generateEditFunnelURL(funnelId) {
+  return `https://app.checkoutchamp.com/editfunnel/${funnelId}`;
+}
+
+// Generate Page Editor URL
+function generatePageEditorURL(funnelId, pageId) {
+  return `https://app.checkoutchamp.com/webbuilder/v2/${funnelId}/${pageId}`;
+}
+
+// Generate Preview URL
+function generatePreviewURL(funnelId, pageViewId) {
+  if (!pageViewId) {
+    return null;
+  }
+  return `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${pageViewId}.html`;
+}
+
+// Generate Live URL
+function generateLiveURL(domain, urlSlug) {
+  if (!urlSlug) {
+    return null;
+  }
+  // If domain doesn't start with http, add https://
+  const formattedDomain = domain.startsWith('http') ? domain : `https://${domain}`;
+  return `${formattedDomain}/${urlSlug}`;
+}
+
+// Copy to clipboard helper
+async function copyToClipboard(text, successMessage = 'Copied to clipboard!') {
+  try {
+    await navigator.clipboard.writeText(text);
+    showNotification(successMessage);
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    // Fallback method
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      showNotification(successMessage);
+    } catch (e) {
+      alert('Failed to copy to clipboard');
+    }
+    document.body.removeChild(textarea);
+  }
+}
+
+// Show notification
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'copy-notification';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 10);
+
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 300);
+  }, 2000);
+}
+
+// Quick Action: Open Edit Funnel
+function openEditFunnel() {
+  if (!funnelData || !funnelData.referenceId) {
+    alert('Funnel data not available');
+    return;
+  }
+  const url = generateEditFunnelURL(funnelData.referenceId);
+  chrome.tabs.create({ url });
+}
+
+// Quick Action: Copy Edit Funnel URL
+function copyEditFunnelURL() {
+  if (!funnelData || !funnelData.referenceId) {
+    alert('Funnel data not available');
+    return;
+  }
+  const url = generateEditFunnelURL(funnelData.referenceId);
+  copyToClipboard(url, 'Funnel editor URL copied!');
+}
+
+// Quick Action: Open Page Editor
+function openPageEditor(funnelId, pageId) {
+  const url = generatePageEditorURL(funnelId, pageId);
+  chrome.tabs.create({ url });
+}
+
+// Quick Action: Copy Page Editor URL
+function copyPageEditorURL(funnelId, pageId) {
+  const url = generatePageEditorURL(funnelId, pageId);
+  copyToClipboard(url, 'Page editor URL copied!');
+}
+
+// Quick Action: Copy Preview URL
+function copyPreviewURL(funnelId, pageViewId) {
+  const url = generatePreviewURL(funnelId, pageViewId);
+  if (!url) {
+    alert('Preview URL not available for this page');
+    return;
+  }
+  copyToClipboard(url, 'Preview URL copied!');
+}
+
+// Quick Action: Copy Live URL
+function copyLiveURL(domain, urlSlug) {
+  const url = generateLiveURL(domain, urlSlug);
+  if (!url) {
+    alert('Live URL not available for this page');
+    return;
+  }
+  copyToClipboard(url, 'Live URL copied!');
 }
