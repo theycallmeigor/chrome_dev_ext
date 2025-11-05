@@ -123,7 +123,7 @@ function processFunnelData() {
   displayFunnelInfo();
 
   // Display pages
-  displayPages(newPages);
+  displayPages(newPagesSet);
 
   // Show success state
   loadingEl.classList.add('hidden');
@@ -135,7 +135,7 @@ function processFunnelData() {
   displayHistoryStats();
 
   // Show new pages indicator if any
-  if (newPages.size > 0) {
+  if (newPagesSet.size > 0) {
     newPagesIndicatorEl.classList.remove('hidden');
     setTimeout(() => {
       newPagesIndicatorEl.classList.add('hidden');
