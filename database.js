@@ -253,17 +253,19 @@ async function togglePageFavorite(funnelId, pageId) {
 
 // Build page URL
 function buildPageURL(page, funnelId, funnelData) {
-  // Need to get domain from somewhere - for now return placeholder
-  const domain = 'https://example.com'; // This should be stored or inferred
+  // Get domain from stored funnel data
+  const domain = funnelData.domain || 'https://example.com';
 
   if (page.externalURL) {
     return page.externalURL;
   } else if (page.urlSlug) {
     return `${domain}/${page.urlSlug}`;
+  } else if (page.referenceId) {
+    // Preview URL using stored referenceId
+    return `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${page.referenceId}.html`;
   } else {
-    // Preview URL
-    const pageViewId = page.referenceId; // Adjust as needed
-    return `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${pageViewId}.html`;
+    // Fallback
+    return `${domain}/page`;
   }
 }
 

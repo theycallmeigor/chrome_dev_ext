@@ -298,9 +298,13 @@ async function updateHistoricalData(funnelId, pages) {
   if (!historicalData[funnelId]) {
     historicalData[funnelId] = {
       name: funnelData.name,
+      domain: currentDomain,
       firstSeen: new Date().toISOString(),
       pages: {}
     };
+  } else {
+    // Update domain if it has changed
+    historicalData[funnelId].domain = currentDomain;
   }
 
   pages.forEach(page => {
@@ -308,12 +312,21 @@ async function updateHistoricalData(funnelId, pages) {
       historicalData[funnelId].pages[page.referenceId] = {
         title: page.title,
         urlSlug: page.urlSlug,
+        externalURL: page.externalURL,
+        referenceId: page.pageView?.[0]?.referenceId,
         firstSeen: new Date().toISOString(),
         splitEnabled: page.splitEnabled
       };
     } else {
       // Update split status if changed
       historicalData[funnelId].pages[page.referenceId].splitEnabled = page.splitEnabled;
+      // Update externalURL and referenceId if they exist
+      if (page.externalURL) {
+        historicalData[funnelId].pages[page.referenceId].externalURL = page.externalURL;
+      }
+      if (page.pageView?.[0]?.referenceId) {
+        historicalData[funnelId].pages[page.referenceId].referenceId = page.pageView[0].referenceId;
+      }
     }
   });
 
