@@ -453,6 +453,112 @@
       }
     });
 
+    // Also search for elements with data-id attributes that have linkDetails
+    // This catches elements that don't have fkt-* IDs but have fkt-* data-ids with linkDetails
+    try {
+      const elementsWithDataId = document.querySelectorAll('[data-id^="fkt-"]');
+      elementsWithDataId.forEach(el => {
+        const dataId = el.getAttribute('data-id');
+
+        // Skip if we already processed this element
+        if (foundElements.has(el.id || dataId)) {
+          return;
+        }
+
+        // Check if this data-id has linkDetails
+        let hasLinkDetails = false;
+        let linkDetailsData = null;
+
+        if (window.linkDetails && window.linkDetails[dataId]) {
+          hasLinkDetails = true;
+          linkDetailsData = window.linkDetails[dataId];
+        } else if (window.buttonDetails && window.buttonDetails[dataId]) {
+          hasLinkDetails = true;
+          linkDetailsData = window.buttonDetails[dataId];
+        }
+
+        // Only include if it has linkDetails
+        if (hasLinkDetails && linkDetailsData) {
+          const elementId = el.id || dataId;
+          foundElements.add(elementId);
+
+          const elementData = {
+            elementId: elementId,
+            dataId: dataId,
+            tagName: el.tagName.toLowerCase(),
+            text: el.textContent.trim().substring(0, 100),
+            classes: Array.from(el.classList),
+            href: el.href || null,
+            onclick: el.onclick ? el.onclick.toString() : null,
+            dataAttributes: extractDataAttributes(el),
+            linkDetails: linkDetailsData,
+            constructedPreviewUrl: null,
+            constructedLiveUrl: null,
+            targetPageInfo: null
+          };
+
+          // Extract URL from href if it exists
+          try {
+            if (el.href && el.tagName.toLowerCase() === 'a') {
+              const href = el.href;
+
+              if (href.includes('funnels-build.thisisatestsiteonly.com')) {
+                elementData.constructedPreviewUrl = href;
+                const match = href.match(/\/([a-f0-9-]{36})\.html/i);
+                if (match) {
+                  elementData.targetPageInfo = {
+                    targetPageViewReferenceId: match[1]
+                  };
+                }
+              } else if (href.startsWith(window.location.origin) && href !== window.location.href) {
+                elementData.constructedLiveUrl = href;
+                const urlPath = href.replace(window.location.origin + '/', '');
+                if (urlPath && !urlPath.includes('http')) {
+                  if (!elementData.targetPageInfo) {
+                    elementData.targetPageInfo = {};
+                  }
+                  elementData.targetPageInfo.urlSlug = urlPath;
+                }
+              }
+            }
+
+            // Process linkDetails to construct URLs
+            if (linkDetailsData && Array.isArray(linkDetailsData)) {
+              const firstLink = linkDetailsData[0];
+              if (firstLink) {
+                if (!elementData.targetPageInfo) {
+                  elementData.targetPageInfo = {};
+                }
+
+                elementData.targetPageInfo.targetPageReferenceId = firstLink.targetPageReferenceId;
+                elementData.targetPageInfo.targetPageViewReferenceId = firstLink.targetPageViewReferenceId;
+                elementData.targetPageInfo.urlSlug = firstLink.urlSlug;
+                elementData.targetPageInfo.products = firstLink.products;
+
+                // Construct preview URL if we don't already have one
+                if (!elementData.constructedPreviewUrl && firstLink.targetPageViewReferenceId && funnelId) {
+                  elementData.constructedPreviewUrl =
+                    `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${firstLink.targetPageViewReferenceId}.html`;
+                }
+
+                // Construct live URL if we don't already have one
+                if (!elementData.constructedLiveUrl && firstLink.urlSlug) {
+                  const currentDomain = window.location.origin;
+                  elementData.constructedLiveUrl = `${currentDomain}/${firstLink.urlSlug}`;
+                }
+              }
+            }
+          } catch (e) {
+            console.log('Error processing data-id element:', e);
+          }
+
+          fktElements.push(elementData);
+        }
+      });
+    } catch (e) {
+      console.log('Error searching for data-id elements:', e);
+    }
+
     return fktElements;
   }
 
