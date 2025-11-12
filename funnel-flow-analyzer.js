@@ -2,38 +2,76 @@
 // This script runs in the context of the webpage when "Analyze Funnel Flow" is clicked
 
 (function() {
-  // Helper function to run code in the actual page context (not content script context)
-  function runInPageContext(fn) {
-    const script = document.createElement('script');
-    script.textContent = `(${fn.toString()})();`;
-    document.documentElement.appendChild(script);
-    script.remove();
+  // Helper to fetch and parse index.js for pageData
+  async function fetchPageData(indexJsUrl) {
+    try {
+      console.log('Fetching index.js:', indexJsUrl);
+      const response = await fetch(indexJsUrl);
+      const jsCode = await response.text();
+
+      // Extract pageData from the JavaScript code
+      // Look for window.pageData = {...}
+      const pageDataMatch = jsCode.match(/window\.pageData\s*=\s*(\{[\s\S]*?\});/);
+      if (pageDataMatch) {
+        const pageDataJson = pageDataMatch[1];
+        const pageData = eval('(' + pageDataJson + ')');
+        console.log('✓ Extracted pageData from index.js:', pageData);
+        return pageData;
+      }
+
+      console.log('✗ Could not find pageData in index.js');
+      return null;
+    } catch (e) {
+      console.log('Error fetching index.js:', e);
+      return null;
+    }
   }
 
-  // Helper to get data from page context
-  function getFromPageContext(code) {
-    return new Promise((resolve) => {
-      const eventName = 'checkoutchamp_data_' + Date.now();
+  // Helper to get navigation URL using pageData (mimics CheckoutChamp logic)
+  function getNavigationUrl(buttonId, pageData) {
+    if (!pageData || !pageData.funnelData || !pageData.funnelData.pages) {
+      return null;
+    }
 
-      window.addEventListener(eventName, function handler(e) {
-        window.removeEventListener(eventName, handler);
-        resolve(e.detail);
-      });
+    // Find the button/link in pageData
+    let navigationItem = null;
+    for (const page of pageData.funnelData.pages) {
+      if (page.links) {
+        navigationItem = page.links.find(l => l.elementId === buttonId);
+        if (navigationItem) break;
+      }
+      if (page.buttons) {
+        navigationItem = page.buttons.find(b => b.elementId === buttonId);
+        if (navigationItem) break;
+      }
+    }
 
-      const script = document.createElement('script');
-      script.textContent = `
-        (function() {
-          try {
-            const result = ${code};
-            window.dispatchEvent(new CustomEvent('${eventName}', { detail: result }));
-          } catch (e) {
-            window.dispatchEvent(new CustomEvent('${eventName}', { detail: { error: e.message } }));
-          }
-        })();
-      `;
-      document.documentElement.appendChild(script);
-      script.remove();
-    });
+    if (!navigationItem || !navigationItem.linkDetails || navigationItem.linkDetails.length === 0) {
+      return null;
+    }
+
+    const linkDetail = navigationItem.linkDetails[0];
+
+    // If it has urlSlug, return live URL
+    if (linkDetail.urlSlug) {
+      return {
+        url: linkDetail.urlSlug,
+        isLive: true,
+        navigationItem: navigationItem
+      };
+    }
+
+    // If it has targetPageViewReferenceId, return preview URL info
+    if (linkDetail.targetPageViewReferenceId) {
+      return {
+        url: linkDetail.targetPageViewReferenceId + '.html',
+        isPreview: true,
+        navigationItem: navigationItem,
+        funnelId: pageData.funnelData.referenceId
+      };
+    }
+
+    return null;
   }
 
   const flowData = {
@@ -333,7 +371,6 @@
   // 10. Extract FunnelKit elements (fkt-link-*, fkt-button-*) and construct preview URLs
   async function extractFunnelKitElements() {
     const fktElements = [];
-    const urlPromises = []; // Collect all URL lookup promises
 
     // Get campaign/funnel ID - try multiple sources
     let funnelId = null;
@@ -393,6 +430,22 @@
 
       console.log('Final Campaign/Funnel ID:', funnelId);
       console.log('Index.js URL:', indexJsUrl);
+
+      // Fetch and parse pageData from index.js
+      let pageData = null;
+      if (indexJsUrl) {
+        pageData = await fetchPageData(indexJsUrl);
+        if (pageData) {
+          console.log('✓ Successfully fetched and parsed pageData from index.js');
+          // Use pageData to get funnelId if we don't have it yet
+          if (!funnelId && pageData.funnelData) {
+            funnelId = pageData.funnelData.referenceId;
+            console.log('✓ Got funnelId from pageData:', funnelId);
+          }
+        } else {
+          console.log('✗ Failed to fetch/parse pageData from index.js');
+        }
+      }
 
       // Search ALL window variables for linkDetails data
       console.log('=== Searching ALL window variables for linkDetails ===');
@@ -554,75 +607,41 @@
               if (el.id) idsToTry.push(el.id);
               if (dataId && dataId !== el.id) idsToTry.push(dataId);
 
-              // Method 6: Use CheckoutChamp's native functions via page context
-              if (idsToTry.length > 0) {
-                const urlPromise = (async () => {
-                  for (const buttonId of idsToTry) {
-                    try {
-                      console.log(`Trying CheckoutChamp functions in page context for ${buttonId}...`);
+              // Method 6: Use parsed pageData to get navigation URL
+              if (idsToTry.length > 0 && pageData) {
+                for (const buttonId of idsToTry) {
+                  try {
+                    console.log(`Trying to get navigation URL for ${buttonId} from pageData...`);
 
-                      const urlData = await getFromPageContext(`
-                        (function() {
-                          if (!window.pageData || !window.getNavigationItemFromPageData || !window.getButtonOrLinkData || !window.redirectPath) {
-                            return { error: 'CheckoutChamp functions not available' };
-                          }
+                    const urlResult = getNavigationUrl(buttonId, pageData);
 
-                          const buttonItem = window.getNavigationItemFromPageData('${buttonId}');
-                          if (!buttonItem) {
-                            return { error: 'No navigation item found for ${buttonId}' };
-                          }
+                    if (urlResult && urlResult.url) {
+                      console.log(`🎯 Found URL for ${buttonId}:`, urlResult);
 
-                          const pageType = window.pageData.pageTypeId ||
-                                          (window.pageData.pageView && window.pageData.pageView[0] && window.pageData.pageView[0].pageTypeId) ||
-                                          4;
-
-                          const buttonData = window.getButtonOrLinkData(buttonItem, pageType);
-                          if (!buttonData) {
-                            return { error: 'No button data found' };
-                          }
-
-                          const targetUrl = window.redirectPath(buttonData, false);
-
-                          return {
-                            url: targetUrl,
-                            navigationItem: buttonItem,
-                            pageType: pageType,
-                            funnelId: window.pageData.funnelData ? window.pageData.funnelData.referenceId : null
-                          };
-                        })()
-                      `);
-
-                      if (urlData && !urlData.error && urlData.url) {
-                        console.log(`🎯 CheckoutChamp URL for ${buttonId}: ${urlData.url}`);
-
-                        // Store the URL based on whether it's preview or live
-                        if (urlData.url.includes('funnels-build.thisisatestsiteonly.com')) {
-                          elementData.constructedPreviewUrl = urlData.url;
-                        } else if (urlData.url.includes('.html') && urlData.funnelId) {
-                          // It's a relative preview URL, make it absolute
-                          elementData.constructedPreviewUrl = `https://funnels-build.thisisatestsiteonly.com/${urlData.funnelId}/${urlData.url}`;
-                          console.log(`✓ Built absolute preview URL: ${elementData.constructedPreviewUrl}`);
-                        } else {
-                          // It's a live URL (slug)
-                          elementData.constructedLiveUrl = `${window.location.origin}/${urlData.url}`;
-                          console.log(`✓ Built live URL: ${elementData.constructedLiveUrl}`);
-                        }
-
-                        // Store the navigation item data
-                        if (urlData.navigationItem) {
-                          elementData.linkDetails = urlData.navigationItem.linkDetails || [urlData.navigationItem];
-                        }
-
-                        break; // Found URL, stop trying other IDs
-                      } else if (urlData && urlData.error) {
-                        console.log(`✗ ${urlData.error}`);
+                      // Store the URL based on whether it's preview or live
+                      if (urlResult.isLive) {
+                        // It's a live URL (slug)
+                        elementData.constructedLiveUrl = `${window.location.origin}/${urlResult.url}`;
+                        console.log(`✓ Built live URL: ${elementData.constructedLiveUrl}`);
+                      } else if (urlResult.isPreview) {
+                        // It's a preview URL
+                        elementData.constructedPreviewUrl = `https://funnels-build.thisisatestsiteonly.com/${urlResult.funnelId}/${urlResult.url}`;
+                        console.log(`✓ Built preview URL: ${elementData.constructedPreviewUrl}`);
                       }
-                    } catch (e) {
-                      console.log(`Error using CheckoutChamp functions for ${buttonId}:`, e);
+
+                      // Store the navigation item data
+                      if (urlResult.navigationItem) {
+                        elementData.linkDetails = urlResult.navigationItem.linkDetails || [urlResult.navigationItem];
+                      }
+
+                      break; // Found URL, stop trying other IDs
+                    } else {
+                      console.log(`✗ No URL found for ${buttonId} in pageData`);
                     }
+                  } catch (e) {
+                    console.log(`Error getting navigation URL for ${buttonId}:`, e);
                   }
-                })();
-                urlPromises.push(urlPromise);
+                }
               }
 
               // If we found linkDetails, construct preview URL (if not already found from href)
@@ -753,67 +772,45 @@
             if (el.id) idsToTry2.push(el.id);
             if (dataId && dataId !== el.id) idsToTry2.push(dataId);
 
-            console.log(`[Data-ID Pass] Checking CheckoutChamp functions for element ${el.id || dataId}:`);
+            console.log(`[Data-ID Pass] Checking for element ${el.id || dataId} in pageData`);
             console.log(`  - idsToTry:`, idsToTry2);
-            console.log(`  - getNavigationItemFromPageData exists:`, typeof window.getNavigationItemFromPageData === 'function');
-            console.log(`  - getButtonOrLinkData exists:`, typeof window.getButtonOrLinkData === 'function');
-            console.log(`  - redirectPath exists:`, typeof window.redirectPath === 'function');
-            console.log(`  - pageData exists:`, !!window.pageData);
+            console.log(`  - pageData available:`, !!pageData);
 
-            if (idsToTry2.length > 0 &&
-                typeof window.getNavigationItemFromPageData === 'function' &&
-                typeof window.getButtonOrLinkData === 'function' &&
-                typeof window.redirectPath === 'function' &&
-                window.pageData) {
-
-              console.log(`✓ [Data-ID Pass] All CheckoutChamp functions available, proceeding...`);
+            if (idsToTry2.length > 0 && pageData) {
+              console.log(`✓ [Data-ID Pass] pageData available, proceeding...`);
 
               for (const buttonId of idsToTry2) {
                 try {
-                  console.log(`[Data-ID Pass] Trying CheckoutChamp functions for ${buttonId}...`);
+                  console.log(`[Data-ID Pass] Trying to get navigation URL for ${buttonId} from pageData...`);
 
-                  const navigationItem = window.getNavigationItemFromPageData(buttonId);
-                  if (navigationItem) {
-                    console.log(`✓ [Data-ID Pass] Found navigation item for ${buttonId}:`, navigationItem);
+                  const urlResult = getNavigationUrl(buttonId, pageData);
 
-                    // Get page type
-                    const pageType = window.pageData.pageTypeId ||
-                                   (window.pageData.pageView && window.pageData.pageView[0] && window.pageData.pageView[0].pageTypeId) ||
-                                   4; // default to checkout
+                  if (urlResult && urlResult.url) {
+                    console.log(`🎯 [Data-ID Pass] Found URL for ${buttonId}:`, urlResult);
 
-                    console.log(`[Data-ID Pass] pageType: ${pageType}`);
-
-                    const buttonData = window.getButtonOrLinkData(navigationItem, pageType);
-                    console.log(`[Data-ID Pass] buttonData for ${buttonId}:`, buttonData);
-
-                    const targetUrl = window.redirectPath(buttonData, false); // false = no timestamp
-                    if (targetUrl) {
-                      console.log(`🎯 [Data-ID Pass] CheckoutChamp URL for ${buttonId}: ${targetUrl}`);
-
-                      // Store the URL based on whether it's preview or live
-                      if (targetUrl.includes('funnels-build.thisisatestsiteonly.com')) {
-                        elementData.constructedPreviewUrl = targetUrl;
-                      } else if (targetUrl.includes('.html')) {
-                        // It's a relative preview URL, make it absolute
-                        elementData.constructedPreviewUrl = `https://funnels-build.thisisatestsiteonly.com/${window.pageData.funnelData.referenceId}/${targetUrl}`;
-                        console.log(`✓ [Data-ID Pass] Built absolute preview URL: ${elementData.constructedPreviewUrl}`);
-                      } else {
-                        elementData.constructedLiveUrl = targetUrl;
-                      }
-
-                      // Also store the navigation item data
-                      if (!linkDetailsData) {
-                        linkDetailsData = navigationItem.linkDetails || [navigationItem];
-                        elementData.linkDetails = linkDetailsData;
-                      }
-
-                      break; // Found URL, stop trying other IDs
+                    // Store the URL based on whether it's preview or live
+                    if (urlResult.isLive) {
+                      // It's a live URL (slug)
+                      elementData.constructedLiveUrl = `${window.location.origin}/${urlResult.url}`;
+                      console.log(`✓ [Data-ID Pass] Built live URL: ${elementData.constructedLiveUrl}`);
+                    } else if (urlResult.isPreview) {
+                      // It's a preview URL
+                      elementData.constructedPreviewUrl = `https://funnels-build.thisisatestsiteonly.com/${urlResult.funnelId}/${urlResult.url}`;
+                      console.log(`✓ [Data-ID Pass] Built preview URL: ${elementData.constructedPreviewUrl}`);
                     }
+
+                    // Store the navigation item data
+                    if (urlResult.navigationItem && !linkDetailsData) {
+                      linkDetailsData = urlResult.navigationItem.linkDetails || [urlResult.navigationItem];
+                      elementData.linkDetails = linkDetailsData;
+                    }
+
+                    break; // Found URL, stop trying other IDs
                   } else {
-                    console.log(`✗ [Data-ID Pass] No navigation item found for ${buttonId} in pageData`);
+                    console.log(`✗ [Data-ID Pass] No URL found for ${buttonId} in pageData`);
                   }
                 } catch (e) {
-                  console.log(`[Data-ID Pass] Error using CheckoutChamp functions for ${buttonId}:`, e);
+                  console.log(`[Data-ID Pass] Error getting navigation URL for ${buttonId}:`, e);
                 }
               }
             }
@@ -973,11 +970,6 @@
     }
 
     console.log('Total FunnelKit elements found:', fktElements.length);
-
-    // Wait for all URL lookups to complete
-    console.log(`Waiting for ${urlPromises.length} URL lookups to complete...`);
-    await Promise.all(urlPromises);
-    console.log('All URL lookups complete!');
 
     // Store campaign metadata in flowData for debugging
     flowData.campaignMetadata.campaignId = funnelId;
