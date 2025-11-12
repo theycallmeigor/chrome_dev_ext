@@ -12,6 +12,10 @@
       <div class="header-top">
         <h1>Funnel Database</h1>
         <div class="header-actions">
+          <div class="view-toggle">
+            <button id="gridViewBtn" class="btn btn-small active" title="Grid view">⊞ Grid</button>
+            <button id="listViewBtn" class="btn btn-small" title="List view">≡ List</button>
+          </div>
           <button id="refreshData" class="btn btn-secondary">Refresh</button>
           <button id="exportAll" class="btn btn-success">Export All</button>
         </div>
@@ -79,6 +83,11 @@
       </div>
     </header>
 
+    <div id="recentActivitySection" class="recent-activity-section">
+      <h3>Recent Activity Timeline</h3>
+      <div id="recentActivityTimeline" class="activity-timeline"></div>
+    </div>
+
     <main id="databaseContent" class="database-content">
       <!-- Funnel cards will be inserted here -->
     </main>
@@ -124,6 +133,7 @@
     </div>
   </div>
 
+  <script src="utils.js"></script>
   <script src="database.js"></script>
 </body>
 </html>

@@ -8,26 +8,64 @@
 </head>
 <body>
   <div class="container">
-    <header>
+    <header class="sticky-header">
       <h1>CheckoutChamp Funnel Pages</h1>
       <div class="header-actions">
         <label class="checkbox-container">
           <input type="checkbox" id="selectAll">
           <span>Select All</span>
         </label>
-        <button id="openSelected" class="btn btn-primary">Open Selected</button>
-        <button id="openAll" class="btn btn-secondary">Open All</button>
-        <button id="exportExcel" class="btn btn-success">Export to Excel</button>
+        <button id="openSelected" class="btn btn-primary" title="Ctrl+Shift+O">Open Selected</button>
+        <button id="openAll" class="btn btn-secondary" title="Ctrl+O">Open All</button>
+        <button id="exportExcel" class="btn btn-success" title="Ctrl+E">Export to Excel</button>
       </div>
       <div class="utility-actions">
         <button id="showHiddenContent" class="btn btn-info btn-small">Show Hidden Content</button>
-        <button id="openDatabase" class="btn btn-secondary btn-small">Open Database</button>
+        <button id="openDatabase" class="btn btn-secondary btn-small" title="Ctrl+D">Open Database</button>
       </div>
     </header>
 
     <div id="funnelInfo" class="funnel-info hidden">
-      <h2 id="funnelName"></h2>
-      <div id="funnelDetails"></div>
+      <div class="funnel-header-section">
+        <div>
+          <h2 id="funnelName"></h2>
+          <div id="funnelDetails"></div>
+        </div>
+        <div class="funnel-header-actions">
+          <button id="addNoteBtn" class="btn btn-icon btn-small" title="Add quick note">📝</button>
+          <button id="addTagBtn" class="btn btn-icon btn-small" title="Add tags">🏷️</button>
+          <button id="pinFunnelBtn" class="btn btn-icon btn-small" title="Pin this funnel">📌</button>
+        </div>
+      </div>
+
+      <!-- Page Count Indicator -->
+      <div id="pageCountIndicator" class="page-count-indicator hidden"></div>
+
+      <!-- Quick Notes Section -->
+      <div id="notesSection" class="collapsible-section hidden">
+        <div class="collapsible-header" id="notesToggle">
+          <span class="collapsible-icon">▼</span>
+          <h3>Quick Notes</h3>
+        </div>
+        <div class="collapsible-content">
+          <textarea id="funnelNotes" class="funnel-notes" placeholder="Add notes about this funnel..."></textarea>
+          <button id="saveNotesBtn" class="btn btn-small btn-secondary">Save Note</button>
+        </div>
+      </div>
+
+      <!-- Tags Section -->
+      <div id="tagsSection" class="collapsible-section hidden">
+        <div class="collapsible-header" id="tagsToggle">
+          <span class="collapsible-icon">▼</span>
+          <h3>Tags</h3>
+        </div>
+        <div class="collapsible-content">
+          <div id="tagsList" class="tags-list"></div>
+          <div class="tag-input-group">
+            <input type="text" id="tagInput" class="tag-input" placeholder="Add a tag and press Enter...">
+          </div>
+        </div>
+      </div>
 
       <!-- Funnel Ownership -->
       <div class="ownership-section">
@@ -42,53 +80,90 @@
       </div>
 
       <!-- Quick Actions -->
-      <div class="quick-actions-section" id="quickActionsSection">
-        <h3>Quick Actions</h3>
-        <div class="quick-actions-grid">
-          <button id="editFunnelBtn" class="quick-action-btn" title="Open funnel editor">
-            <span class="action-icon">✏️</span>
-            <span class="action-label">Edit Funnel</span>
-          </button>
-          <button id="copyEditFunnelBtn" class="quick-action-btn-secondary" title="Copy funnel editor URL">
-            <span class="action-icon">📋</span>
-            <span class="action-label">Copy</span>
-          </button>
+      <div class="collapsible-section">
+        <div class="collapsible-header" id="quickActionsToggle">
+          <span class="collapsible-icon">▼</span>
+          <h3>Quick Actions</h3>
+        </div>
+        <div class="collapsible-content" id="quickActionsSection">
+          <div class="quick-actions-grid">
+            <button id="editFunnelBtn" class="quick-action-btn" title="Open funnel editor">
+              <span class="action-icon">✏️</span>
+              <span class="action-label">Edit Funnel</span>
+            </button>
+            <button id="copyEditFunnelBtn" class="quick-action-btn-secondary" title="Copy funnel editor URL">
+              <span class="action-icon">📋</span>
+              <span class="action-label">Copy</span>
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Filter Controls -->
-      <div class="filter-bar">
-        <div class="filter-controls">
-          <select id="pageTypeFilterPopup" class="filter-select">
-            <option value="all">All Page Types</option>
-            <option value="1">Landing Page</option>
-            <option value="2">Lead Page</option>
-            <option value="3">Upsell</option>
-            <option value="4">Checkout</option>
-            <option value="5">Thank You</option>
-            <option value="14">Static Page</option>
-          </select>
+      <div class="collapsible-section">
+        <div class="collapsible-header" id="filterToggle">
+          <span class="collapsible-icon">▼</span>
+          <h3>Filters</h3>
+        </div>
+        <div class="collapsible-content filter-bar">
+          <div class="filter-controls">
+            <select id="pageTypeFilterPopup" class="filter-select">
+              <option value="all">All Page Types</option>
+              <option value="1">Landing Page</option>
+              <option value="2">Lead Page</option>
+              <option value="3">Upsell</option>
+              <option value="4">Checkout</option>
+              <option value="5">Thank You</option>
+              <option value="14">Static Page</option>
+            </select>
 
-          <label class="checkbox-filter">
-            <input type="checkbox" id="showFavoritesOnlyPopup">
-            <span>Favorites Only</span>
-          </label>
+            <label class="checkbox-filter">
+              <input type="checkbox" id="showFavoritesOnlyPopup">
+              <span>Favorites Only</span>
+            </label>
 
-          <label class="checkbox-filter">
-            <input type="checkbox" id="showABTestsOnlyPopup">
-            <span>A/B Tests Only</span>
-          </label>
+            <label class="checkbox-filter">
+              <input type="checkbox" id="showABTestsOnlyPopup">
+              <span>A/B Tests Only</span>
+            </label>
 
-          <label class="checkbox-filter">
-            <input type="checkbox" id="showNewOnlyPopup">
-            <span>New Pages Only</span>
-          </label>
+            <label class="checkbox-filter">
+              <input type="checkbox" id="showNewOnlyPopup">
+              <span>New Pages Only</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
 
     <div id="loading" class="loading">
-      <p>Loading funnel data...</p>
+      <div class="skeleton-loader">
+        <div class="skeleton-item">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-text"></div>
+          <div class="skeleton-line skeleton-text"></div>
+        </div>
+        <div class="skeleton-item">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-text"></div>
+          <div class="skeleton-line skeleton-text"></div>
+        </div>
+        <div class="skeleton-item">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-text"></div>
+          <div class="skeleton-line skeleton-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="recentPagesSection" class="recent-pages-section hidden">
+      <div class="collapsible-header collapsed" id="recentPagesToggle">
+        <span class="collapsible-icon">▶</span>
+        <h3>Recent Pages</h3>
+      </div>
+      <div class="collapsible-content hidden" id="recentPagesContent">
+        <div id="recentPagesList" class="recent-pages-list"></div>
+      </div>
     </div>
 
     <div id="error" class="error hidden">
@@ -132,6 +207,7 @@
     <input type="file" id="importFileInput" accept=".json" style="display: none;">
   </div>
 
+  <script src="utils.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

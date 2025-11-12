@@ -28,10 +28,17 @@ const abTestModal = document.getElementById('abTestModal');
 const pageDetailsModal = document.getElementById('pageDetailsModal');
 const closeABTestModalBtn = document.getElementById('closeABTestModal');
 const closePageDetailsModalBtn = document.getElementById('closePageDetailsModal');
+const gridViewBtn = document.getElementById('gridViewBtn');
+const listViewBtn = document.getElementById('listViewBtn');
+const recentActivityTimeline = document.getElementById('recentActivityTimeline');
+const recentActivitySection = document.getElementById('recentActivitySection');
+
+let currentViewMode = 'grid';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
+  await displayRecentActivity();
   renderDatabase();
 
   // Event listeners
@@ -46,6 +53,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   clearFiltersBtn.addEventListener('click', clearAllFilters);
   closeABTestModalBtn.addEventListener('click', () => abTestModal.classList.add('hidden'));
   closePageDetailsModalBtn.addEventListener('click', () => pageDetailsModal.classList.add('hidden'));
+
+  // View mode toggle
+  gridViewBtn.addEventListener('click', () => {
+    currentViewMode = 'grid';
+    gridViewBtn.classList.add('active');
+    listViewBtn.classList.remove('active');
+    databaseContent.classList.remove('list-view');
+    renderDatabase();
+  });
+
+  listViewBtn.addEventListener('click', () => {
+    currentViewMode = 'list';
+    listViewBtn.classList.add('active');
+    gridViewBtn.classList.remove('active');
+    databaseContent.classList.add('list-view');
+    renderDatabase();
+  });
 
   // Close modals on outside click
   abTestModal.addEventListener('click', (e) => {
@@ -620,4 +644,101 @@ function showABTests(funnelId) {
   // Show first A/B test
   const [pageId, page] = abTestPages[0];
   showABTestComparison(funnelId, pageId);
+}
+
+// Display recent activity timeline
+async function displayRecentActivity() {
+  const recentPages = await getRecentPages(8);
+
+  if (recentPages.length === 0) {
+    recentActivitySection.style.display = 'none';
+    return;
+  }
+
+  recentActivitySection.style.display = 'block';
+  recentActivityTimeline.innerHTML = '';
+
+  recentPages.forEach(page => {
+    const timeDiff = Date.now() - page.timestamp;
+    const timeStr = formatActivityTime(timeDiff);
+
+    const itemEl = document.createElement('div');
+    itemEl.className = 'activity-item';
+    itemEl.innerHTML = `
+      <div class="activity-icon">${getPageTypeIcon(page.pageType)}</div>
+      <div class="activity-content">
+        <div class="activity-title">${page.pageTitle}</div>
+        <div class="activity-meta">Visited ${timeStr}</div>
+      </div>
+    `;
+    itemEl.addEventListener('click', () => {
+      chrome.tabs.create({ url: page.pageUrl });
+    });
+    recentActivityTimeline.appendChild(itemEl);
+  });
+}
+
+function formatActivityTime(ms) {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+}
+
+// Pinned funnels support
+async function getPinnedFunnels() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['pinnedFunnels'], (result) => {
+      resolve(result.pinnedFunnels || []);
+    });
+  });
+}
+
+// Sort funnels with pinned ones first
+async function sortFunnelsWithPinned(funnels) {
+  const pinned = await getPinnedFunnels();
+
+  return funnels.sort((a, b) => {
+    const aPinned = pinned.includes(a.referenceId) ? 1 : 0;
+    const bPinned = pinned.includes(b.referenceId) ? 1 : 0;
+    return bPinned - aPinned;
+  });
+}
+
+// Add pin button to funnel card
+function addPinButton(funnelId, cardEl) {
+  const actionsDiv = cardEl.querySelector('.funnel-card-actions');
+  if (!actionsDiv) return;
+
+  const pinBtn = document.createElement('button');
+  pinBtn.className = 'btn btn-icon pin-btn';
+  pinBtn.title = 'Pin funnel';
+  pinBtn.innerHTML = '📌';
+
+  (async () => {
+    const pinned = await getPinnedFunnels();
+    if (pinned.includes(funnelId)) {
+      pinBtn.classList.add('active');
+    }
+  })();
+
+  pinBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const pinned = await getPinnedFunnels();
+    if (pinned.includes(funnelId)) {
+      await removePinnedFunnel(funnelId);
+      pinBtn.classList.remove('active');
+    } else {
+      await savePinnedFunnel(funnelId);
+      pinBtn.classList.add('active');
+      renderDatabase();
+    }
+  });
+
+  actionsDiv.insertBefore(pinBtn, actionsDiv.firstChild);
 }

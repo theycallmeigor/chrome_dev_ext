@@ -558,6 +558,195 @@ body {
   background: #555;
 }
 
+/* View Toggle */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background: #f0f0f0;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.view-toggle .btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.view-toggle .btn.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.view-toggle .btn:hover {
+  color: #667eea;
+}
+
+/* List View */
+.database-content.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.database-content.list-view .funnel-card {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.database-content.list-view .funnel-card-header {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.database-content.list-view .funnel-card-title {
+  font-size: 15px;
+}
+
+.database-content.list-view .funnel-card-meta {
+  margin-bottom: 4px;
+}
+
+.database-content.list-view .funnel-card-stats {
+  margin-bottom: 0;
+  gap: 20px;
+  background: transparent;
+  padding: 0;
+}
+
+.database-content.list-view .funnel-card-pages {
+  display: none;
+}
+
+.database-content.list-view .funnel-card-actions {
+  padding-top: 0;
+  border-top: none;
+  gap: 6px;
+}
+
+.database-content.list-view .funnel-card-actions .btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Recent Activity Timeline */
+.recent-activity-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.recent-activity-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-left: 3px solid #667eea;
+  background: #f9f9f9;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.activity-item:hover {
+  background: #f0f0f0;
+  transform: translateX(4px);
+}
+
+.activity-icon {
+  font-size: 18px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-title {
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.activity-meta {
+  font-size: 11px;
+  color: #999;
+}
+
+.activity-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.no-activity {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+  font-size: 13px;
+}
+
+/* Pinned Funnels */
+.funnel-card.pinned {
+  border-top: 3px solid #FFD700;
+}
+
+.pin-badge {
+  display: inline-block;
+  background: #FFD700;
+  color: #333;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.pin-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px;
+  opacity: 0.5;
+  transition: all 0.2s;
+}
+
+.pin-btn:hover,
+.pin-btn.active {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.pin-btn.active {
+  color: #FFD700;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .database-content {
@@ -581,5 +770,16 @@ body {
   .filter-select,
   .checkbox-filter {
     width: 100%;
+  }
+
+  .database-content.list-view .funnel-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .database-content.list-view .funnel-card-stats {
+    width: 100%;
+    flex-direction: row;
+    gap: 10px;
   }
 }

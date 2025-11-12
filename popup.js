@@ -46,6 +46,26 @@ const editFunnelBtn = document.getElementById('editFunnelBtn');
 const copyEditFunnelBtn = document.getElementById('copyEditFunnelBtn');
 const markAsMyFunnelCheckbox = document.getElementById('markAsMyFunnel');
 const quickActionsSection = document.getElementById('quickActionsSection');
+const pageCountIndicatorEl = document.getElementById('pageCountIndicator');
+const notesSection = document.getElementById('notesSection');
+const notesSectionToggle = document.getElementById('notesToggle');
+const funnelNotesEl = document.getElementById('funnelNotes');
+const saveNotesBtn = document.getElementById('saveNotesBtn');
+const tagsSection = document.getElementById('tagsSection');
+const tagsSectionToggle = document.getElementById('tagsToggle');
+const tagsList = document.getElementById('tagsList');
+const tagInput = document.getElementById('tagInput');
+const addNoteBtn = document.getElementById('addNoteBtn');
+const addTagBtn = document.getElementById('addTagBtn');
+const pinFunnelBtn = document.getElementById('pinFunnelBtn');
+const filterToggle = document.getElementById('filterToggle');
+const quickActionsToggle = document.getElementById('quickActionsToggle');
+const recentPagesSection = document.getElementById('recentPagesSection');
+const recentPagesToggle = document.getElementById('recentPagesToggle');
+const recentPagesContent = document.getElementById('recentPagesContent');
+const recentPagesList = document.getElementById('recentPagesList');
+
+let autoRefreshInterval = null;
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
@@ -53,11 +73,56 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadFavorites();
   await loadOwnedFunnels();
   await loadFilterPreferences();
+  await displayRecentPages();
   await fetchFunnelData();
+
+  // Register keyboard shortcuts
+  registerKeyboardShortcuts({
+    onOpenAll: () => openAllPages(),
+    onOpenSelected: () => openSelectedPages(),
+    onSelectAll: () => selectAllPages(),
+    onExport: () => exportExcelPages(),
+    onOpenDatabase: () => openDatabase()
+  });
 
   // Add event listeners for new buttons
   showHiddenContentBtn.addEventListener('click', revealHiddenContent);
   openDatabaseBtn.addEventListener('click', openDatabase);
+
+  // Collapsible sections
+  addCollapsibleListener(filterToggle, () => document.querySelector('.filter-bar'));
+  addCollapsibleListener(quickActionsToggle, () => quickActionsSection);
+  addCollapsibleListener(notesSectionToggle, () => notesSection.querySelector('.collapsible-content'));
+  addCollapsibleListener(tagsSectionToggle, () => tagsSection.querySelector('.collapsible-content'));
+  addCollapsibleListener(recentPagesToggle, () => recentPagesContent);
+
+  // Notes functionality
+  saveNotesBtn.addEventListener('click', saveFunnelNote);
+
+  // Tags functionality
+  tagInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  });
+
+  // Add note and tag buttons
+  addNoteBtn.addEventListener('click', () => {
+    notesSection.classList.remove('hidden');
+    notesSectionToggle.classList.remove('collapsed');
+    notesSection.querySelector('.collapsible-content').classList.remove('hidden');
+    funnelNotesEl.focus();
+  });
+
+  addTagBtn.addEventListener('click', () => {
+    tagsSection.classList.remove('hidden');
+    tagsSectionToggle.classList.remove('collapsed');
+    tagsSection.querySelector('.collapsible-content').classList.remove('hidden');
+    tagInput.focus();
+  });
+
+  pinFunnelBtn.addEventListener('click', togglePinFunnel);
 
   // Add filter event listeners
   pageTypeFilterPopup.addEventListener('change', handlePopupFilterChange);
@@ -158,6 +223,13 @@ function processFunnelData() {
   // Update ownership toggle and Quick Actions visibility
   updateOwnershipToggle();
   updateQuickActionsVisibility();
+
+  // Load and display notes and tags
+  loadAndDisplayNotes();
+  loadAndDisplayTags();
+
+  // Update pin button state
+  updatePinButtonState();
 }
 
 // Display funnel information
@@ -290,9 +362,10 @@ function createPageElement(page, index, isNew) {
   // Add click handler for individual page open
   const openBtn = pageDiv.querySelector('.open-page-btn');
   if (openBtn) {
-    openBtn.addEventListener('click', (e) => {
+    openBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       const url = e.target.dataset.url;
+      await saveRecentPage(funnelId, pageId, page.title || 'Untitled', url);
       chrome.tabs.create({ url });
     });
   }
@@ -1074,4 +1147,186 @@ function copyLiveURL(domain, urlSlug) {
     return;
   }
   copyToClipboard(url, 'Live URL copied!');
+}
+
+// Collapsible sections functionality
+function addCollapsibleListener(headerEl, getContentEl) {
+  if (!headerEl) return;
+  headerEl.addEventListener('click', () => {
+    const contentEl = getContentEl();
+    if (!contentEl) return;
+
+    headerEl.classList.toggle('collapsed');
+    contentEl.classList.toggle('hidden');
+
+    if (!contentEl.classList.contains('hidden')) {
+      contentEl.style.animation = 'slideDown 0.2s ease-out';
+    }
+  });
+}
+
+// Page count indicator
+function updatePageCountIndicator() {
+  const filteredPages = filterPages(pages);
+  const totalPages = pages.length;
+
+  if (filteredPages.length < totalPages) {
+    pageCountIndicatorEl.textContent = `Showing ${filteredPages.length} of ${totalPages} pages`;
+    pageCountIndicatorEl.classList.remove('hidden');
+  } else {
+    pageCountIndicatorEl.classList.add('hidden');
+  }
+}
+
+// Display recent pages
+async function displayRecentPages() {
+  const recentPages = await getRecentPages(5);
+
+  if (recentPages.length === 0) {
+    recentPagesSection.classList.add('hidden');
+    return;
+  }
+
+  recentPagesSection.classList.remove('hidden');
+  recentPagesList.innerHTML = '';
+
+  recentPages.forEach(page => {
+    const timeDiff = Date.now() - page.timestamp;
+    const timeStr = formatTimeDifference(timeDiff);
+
+    const itemEl = document.createElement('div');
+    itemEl.className = 'recent-page-item';
+    itemEl.innerHTML = `
+      <div class="recent-page-icon">${getPageTypeIcon(page.pageType)}</div>
+      <div class="recent-page-info">
+        <div class="recent-page-title">${page.pageTitle}</div>
+        <div class="recent-page-time">${timeStr}</div>
+      </div>
+    `;
+    itemEl.addEventListener('click', () => {
+      chrome.tabs.create({ url: page.pageUrl });
+    });
+    recentPagesList.appendChild(itemEl);
+  });
+}
+
+// Notes functionality
+async function saveFunnelNote() {
+  if (!funnelData || !funnelData.referenceId) return;
+
+  const note = funnelNotesEl.value;
+  await saveNote(funnelData.referenceId, null, note);
+  showNotification('Note saved!');
+}
+
+// Tags functionality
+async function addTag() {
+  const tagText = tagInput.value.trim();
+  if (!tagText || !funnelData || !funnelData.referenceId) return;
+
+  const currentTags = await getTags(funnelData.referenceId);
+  if (!currentTags.includes(tagText)) {
+    currentTags.push(tagText);
+    await saveTags(funnelData.referenceId, currentTags);
+    displayTags(currentTags);
+    tagInput.value = '';
+    showNotification('Tag added!');
+  }
+}
+
+async function displayTags(tags) {
+  tagsList.innerHTML = '';
+
+  tags.forEach(tag => {
+    const tagEl = document.createElement('span');
+    tagEl.className = 'tag';
+    tagEl.innerHTML = `
+      ${tag}
+      <button class="tag-remove">&times;</button>
+    `;
+    tagEl.querySelector('.tag-remove').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (funnelData && funnelData.referenceId) {
+        const updatedTags = tags.filter(t => t !== tag);
+        await saveTags(funnelData.referenceId, updatedTags);
+        displayTags(updatedTags);
+      }
+    });
+    tagsList.appendChild(tagEl);
+  });
+}
+
+async function loadAndDisplayTags() {
+  if (!funnelData || !funnelData.referenceId) return;
+
+  const tags = await getTags(funnelData.referenceId);
+  if (tags.length > 0) {
+    tagsSection.classList.remove('hidden');
+    displayTags(tags);
+  }
+}
+
+async function loadAndDisplayNotes() {
+  if (!funnelData || !funnelData.referenceId) return;
+
+  const note = await getNote(funnelData.referenceId, null);
+  if (note) {
+    notesSection.classList.remove('hidden');
+    funnelNotesEl.value = note;
+  }
+}
+
+// Pin funnel functionality
+async function togglePinFunnel() {
+  if (!funnelData || !funnelData.referenceId) return;
+
+  const pinnedFunnels = await getPinnedFunnels();
+  const funnelId = funnelData.referenceId;
+
+  if (pinnedFunnels.includes(funnelId)) {
+    await removePinnedFunnel(funnelId);
+    pinFunnelBtn.classList.remove('active');
+    showNotification('Funnel unpinned');
+  } else {
+    await savePinnedFunnel(funnelId);
+    pinFunnelBtn.classList.add('active');
+    showNotification('Funnel pinned!');
+  }
+}
+
+async function updatePinButtonState() {
+  if (!funnelData || !funnelData.referenceId) return;
+
+  const pinnedFunnels = await getPinnedFunnels();
+  if (pinnedFunnels.includes(funnelData.referenceId)) {
+    pinFunnelBtn.classList.add('active');
+  } else {
+    pinFunnelBtn.classList.remove('active');
+  }
+}
+
+// Helper functions
+function formatTimeDifference(ms) {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+}
+
+// Update page count when filters change
+function handlePopupFilterChange() {
+  updatePageCountIndicator();
+  displayPages(newPagesSet);
+}
+
+// Override displayPages to track recent pages
+const originalDisplayPages = displayPages;
+function displayPages(newPages) {
+  originalDisplayPages.call(this, newPages);
+  updatePageCountIndicator();
 }
