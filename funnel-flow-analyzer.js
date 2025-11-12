@@ -358,6 +358,16 @@
 
       console.log('Final Campaign/Funnel ID:', funnelId);
       console.log('Index.js URL:', indexJsUrl);
+
+      // Log ALL linkDetails keys for debugging
+      if (window.linkDetails) {
+        console.log('window.linkDetails keys:', Object.keys(window.linkDetails));
+        console.log('Full window.linkDetails:', window.linkDetails);
+      }
+      if (window.buttonDetails) {
+        console.log('window.buttonDetails keys:', Object.keys(window.buttonDetails));
+        console.log('Full window.buttonDetails:', window.buttonDetails);
+      }
     } catch (e) {
       console.log('Error finding campaign ID:', e);
     }
@@ -460,12 +470,17 @@
 
               // Method 5: Check data-id attribute for alternate IDs
               const dataId = el.getAttribute('data-id');
+              console.log(`Element ${el.id} has data-id: ${dataId}`);
               if (dataId && !elementData.linkDetails) {
                 // Try to find linkDetails using the data-id
                 if (window.linkDetails && window.linkDetails[dataId]) {
                   elementData.linkDetails = window.linkDetails[dataId];
+                  console.log(`✓ Found linkDetails for ${dataId} in window.linkDetails:`, elementData.linkDetails);
                 } else if (window.buttonDetails && window.buttonDetails[dataId]) {
                   elementData.linkDetails = window.buttonDetails[dataId];
+                  console.log(`✓ Found linkDetails for ${dataId} in window.buttonDetails:`, elementData.linkDetails);
+                } else {
+                  console.log(`✗ No linkDetails found for ${dataId} in window.linkDetails or window.buttonDetails`);
                 }
               }
 
@@ -482,16 +497,24 @@
                   elementData.targetPageInfo.urlSlug = firstLink.urlSlug;
                   elementData.targetPageInfo.products = firstLink.products;
 
+                  console.log(`Processing linkDetails for ${el.id}:`, {
+                    targetPageViewReferenceId: firstLink.targetPageViewReferenceId,
+                    urlSlug: firstLink.urlSlug,
+                    funnelId: funnelId
+                  });
+
                   // Construct preview URL if we don't already have one
                   if (!elementData.constructedPreviewUrl && firstLink.targetPageViewReferenceId && funnelId) {
                     elementData.constructedPreviewUrl =
                       `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${firstLink.targetPageViewReferenceId}.html`;
+                    console.log(`✓ Built Preview URL: ${elementData.constructedPreviewUrl}`);
                   }
 
                   // Construct live URL if we don't already have one
                   if (!elementData.constructedLiveUrl && firstLink.urlSlug) {
                     const currentDomain = window.location.origin;
                     elementData.constructedLiveUrl = `${currentDomain}/${firstLink.urlSlug}`;
+                    console.log(`✓ Built Live URL: ${elementData.constructedLiveUrl}`);
                   }
                 }
               }
