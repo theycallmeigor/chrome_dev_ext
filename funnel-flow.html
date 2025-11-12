@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Funnel Flow Analyzer - Visual Map</title>
+  <link rel="stylesheet" href="funnel-flow.css">
+</head>
+<body>
+  <div class="flow-container">
+    <header class="flow-header">
+      <div class="header-top">
+        <h1>Funnel Flow Analysis</h1>
+        <div class="header-actions">
+          <button id="exportFlowData" class="btn btn-success btn-small">Export Data</button>
+          <button id="exportFlowImage" class="btn btn-info btn-small">Export as Image</button>
+          <button id="closeFlow" class="btn btn-secondary btn-small">Close</button>
+        </div>
+      </div>
+
+      <div id="currentPageInfo" class="current-page-info">
+        <!-- Current page info will be inserted here -->
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-label">Links Found:</span>
+          <span class="stat-value" id="totalLinks">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Buttons:</span>
+          <span class="stat-value" id="totalButtons">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Forms:</span>
+          <span class="stat-value" id="totalForms">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Data Elements:</span>
+          <span class="stat-value" id="totalDataElements">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Scripts:</span>
+          <span class="stat-value" id="totalScripts">0</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <button id="filterAll" class="filter-btn active">All</button>
+      <button id="filterLinks" class="filter-btn">Links</button>
+      <button id="filterButtons" class="filter-btn">Buttons</button>
+      <button id="filterForms" class="filter-btn">Forms</button>
+      <button id="filterData" class="filter-btn">Data Attributes</button>
+      <button id="filterNav" class="filter-btn">Navigation Elements</button>
+    </div>
+
+    <main class="flow-content">
+      <!-- Visual Flow Section -->
+      <section class="flow-diagram-section">
+        <h2>Visual Flow Diagram</h2>
+        <div id="flowDiagram" class="flow-diagram">
+          <!-- Visual diagram will be rendered here -->
+        </div>
+      </section>
+
+      <!-- Links Section -->
+      <section id="linksSection" class="flow-section">
+        <h2>Links (<span id="linksCount">0</span>)</h2>
+        <div id="linksList" class="flow-items-list">
+          <!-- Links will be listed here -->
+        </div>
+      </section>
+
+      <!-- Buttons Section -->
+      <section id="buttonsSection" class="flow-section">
+        <h2>Buttons (<span id="buttonsCount">0</span>)</h2>
+        <div id="buttonsList" class="flow-items-list">
+          <!-- Buttons will be listed here -->
+        </div>
+      </section>
+
+      <!-- Forms Section -->
+      <section id="formsSection" class="flow-section">
+        <h2>Forms (<span id="formsCount">0</span>)</h2>
+        <div id="formsList" class="flow-items-list">
+          <!-- Forms will be listed here -->
+        </div>
+      </section>
+
+      <!-- Data Attributes Section -->
+      <section id="dataSection" class="flow-section">
+        <h2>Elements with Data Attributes (<span id="dataCount">0</span>)</h2>
+        <div id="dataList" class="flow-items-list">
+          <!-- Data elements will be listed here -->
+        </div>
+      </section>
+
+      <!-- Navigation Elements Section -->
+      <section id="navSection" class="flow-section">
+        <h2>Navigation Elements (<span id="navCount">0</span>)</h2>
+        <div id="navList" class="flow-items-list">
+          <!-- Navigation elements will be listed here -->
+        </div>
+      </section>
+
+      <!-- Scripts Section -->
+      <section id="scriptsSection" class="flow-section">
+        <h2>Loaded Scripts (<span id="scriptsCount">0</span>)</h2>
+        <div id="scriptsList" class="flow-items-list">
+          <!-- Scripts will be listed here -->
+        </div>
+      </section>
+
+      <!-- Navigation Logic Section -->
+      <section id="navigationLogicSection" class="flow-section">
+        <h2>Navigation Logic & Objects</h2>
+        <div id="navigationLogicList" class="flow-items-list">
+          <!-- Navigation logic will be listed here -->
+        </div>
+      </section>
+
+      <!-- Click Handlers Section -->
+      <section id="clickHandlersSection" class="flow-section">
+        <h2>Click Handlers (<span id="clickHandlersCount">0</span>)</h2>
+        <div id="clickHandlersList" class="flow-items-list">
+          <!-- Click handlers will be listed here -->
+        </div>
+      </section>
+    </main>
+
+    <div id="noData" class="no-data hidden">
+      <p>No flow data available.</p>
+      <p>Click "Analyze Funnel Flow" on a page to analyze its funnel structure.</p>
+    </div>
+  </div>
+
+  <script src="funnel-flow.js"></script>
+</body>
+</html>

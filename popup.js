@@ -87,6 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Add event listeners for new buttons
   showHiddenContentBtn.addEventListener('click', revealHiddenContent);
+  document.getElementById('analyzeFunnelFlow').addEventListener('click', analyzeFunnelFlow);
   openDatabaseBtn.addEventListener('click', openDatabase);
 
   // Collapsible sections
@@ -1013,6 +1014,39 @@ async function revealHiddenContent() {
     }
   } catch (error) {
     console.error('Error revealing hidden content:', error);
+    alert('Error: ' + error.message);
+  }
+}
+
+// Analyze funnel flow on current page
+async function analyzeFunnelFlow() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (!tab.id) {
+      alert('Cannot access current tab');
+      return;
+    }
+
+    // Inject and execute the analyzer script
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['funnel-flow-analyzer.js']
+    });
+
+    if (results && results[0] && results[0].result) {
+      const flowData = results[0].result;
+
+      // Store the flow data in chrome storage so the visualization page can access it
+      await chrome.storage.local.set({ currentFlowData: flowData });
+
+      // Open the visualization page
+      chrome.tabs.create({ url: chrome.runtime.getURL('funnel-flow.html') });
+    } else {
+      alert('Could not analyze funnel flow on this page');
+    }
+  } catch (error) {
+    console.error('Error analyzing funnel flow:', error);
     alert('Error: ' + error.message);
   }
 }
