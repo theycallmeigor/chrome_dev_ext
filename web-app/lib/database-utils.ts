@@ -236,9 +236,33 @@ export function importExtensionData(data: ExtensionHistoricalData): ImportResult
   let funnelsImported = 0;
   let pagesImported = 0;
 
+  // Metadata fields to skip (these are not funnel data)
+  const METADATA_FIELDS = ['funnels', 'favorites', 'exportDate', 'lastExportDate', 'version'];
+
   // Use transaction for atomicity
   const importTransaction = db.transaction(() => {
     for (const [funnelId, funnelData] of Object.entries(data)) {
+      // Skip metadata fields
+      if (METADATA_FIELDS.includes(funnelId)) {
+        continue;
+      }
+
+      // Validate that this is actually funnel data
+      if (!funnelData || typeof funnelData !== 'object') {
+        errors.push(`Skipping invalid entry: ${funnelId} (not an object)`);
+        continue;
+      }
+
+      if (!funnelData.name || !funnelData.domain) {
+        errors.push(`Skipping invalid funnel: ${funnelId} (missing required fields: name or domain)`);
+        continue;
+      }
+
+      if (!funnelData.pages || typeof funnelData.pages !== 'object') {
+        errors.push(`Skipping funnel without pages: ${funnelId}`);
+        continue;
+      }
+
       try {
         // Import funnel
         createOrUpdateFunnel({
@@ -338,4 +362,34 @@ export function getStatistics() {
   `).get();
 
   return stats;
+}
+
+// Clean up invalid funnel entries (metadata that was incorrectly imported)
+export function cleanupInvalidFunnels(): { deleted: number; funnelIds: string[] } {
+  const db = getDatabase();
+  const METADATA_FIELDS = ['funnels', 'favorites', 'exportDate', 'lastExportDate', 'version'];
+
+  // Find invalid entries
+  const invalidFunnels = db.prepare(`
+    SELECT funnelId FROM funnels
+    WHERE name IS NULL OR domain IS NULL
+  `).all() as { funnelId: string }[];
+
+  const funnelIdsToDelete = invalidFunnels.map(f => f.funnelId)
+    .concat(METADATA_FIELDS);
+
+  // Delete invalid entries
+  const deleteStmt = db.prepare('DELETE FROM funnels WHERE funnelId = ?');
+  const deleteTransaction = db.transaction(() => {
+    for (const funnelId of funnelIdsToDelete) {
+      deleteStmt.run(funnelId);
+    }
+  });
+
+  deleteTransaction();
+
+  return {
+    deleted: funnelIdsToDelete.length,
+    funnelIds: funnelIdsToDelete
+  };
 }
