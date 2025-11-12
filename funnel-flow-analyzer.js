@@ -8,6 +8,10 @@
       title: document.title,
       timestamp: new Date().toISOString()
     },
+    campaignMetadata: {
+      campaignId: null,
+      indexJsUrl: null
+    },
     links: [],
     buttons: [],
     forms: [],
@@ -298,26 +302,62 @@
 
     // Get campaign/funnel ID - try multiple sources
     let funnelId = null;
+    let indexJsUrl = null;
+
     try {
-      // Method 1: From sessionStorage funnelData
+      console.log('=== Searching for Campaign/Funnel ID ===');
+
+      // Method 1: Look for index.js script tag
+      const scripts = document.querySelectorAll('script[src*="index.js"]');
+      if (scripts.length > 0) {
+        indexJsUrl = scripts[0].src;
+        console.log('Found index.js script:', indexJsUrl);
+      }
+
+      // Method 2: From sessionStorage funnelData
       const funnelDataStr = sessionStorage.getItem('funnelData');
       if (funnelDataStr) {
         const funnelData = JSON.parse(funnelDataStr);
         funnelId = funnelData.referenceId || funnelData.campaignId || funnelData.funnelId;
+        console.log('Found funnelId in sessionStorage.funnelData:', funnelId);
       }
 
-      // Method 2: From window objects
+      // Method 3: From window objects
       if (!funnelId && window.funnelId) {
         funnelId = window.funnelId;
+        console.log('Found funnelId in window.funnelId:', funnelId);
       }
       if (!funnelId && window.campaignId) {
         funnelId = window.campaignId;
+        console.log('Found funnelId in window.campaignId:', funnelId);
       }
       if (!funnelId && window.funnelData) {
         funnelId = window.funnelData.referenceId || window.funnelData.campaignId || window.funnelData.funnelId;
+        console.log('Found funnelId in window.funnelData:', funnelId);
       }
 
-      console.log('Campaign/Funnel ID found:', funnelId);
+      // Method 4: Check window object for campaign-related data
+      if (!funnelId) {
+        console.log('Checking window object for campaign data...');
+        const windowKeys = Object.keys(window).filter(key =>
+          key.toLowerCase().includes('campaign') ||
+          key.toLowerCase().includes('funnel') ||
+          key === 'linkDetails' ||
+          key === 'buttonDetails'
+        );
+        console.log('Found window keys related to campaign/funnel:', windowKeys);
+
+        // Log linkDetails and buttonDetails for inspection
+        if (window.linkDetails) {
+          console.log('window.linkDetails exists with', Object.keys(window.linkDetails).length, 'entries');
+        }
+        if (window.buttonDetails) {
+          console.log('window.buttonDetails exists with', Object.keys(window.buttonDetails).length, 'entries');
+        }
+      }
+
+      console.log('Final Campaign/Funnel ID:', funnelId);
+      console.log('Index.js URL:', indexJsUrl);
     } catch (e) {
       console.log('Error finding campaign ID:', e);
     }
@@ -698,6 +738,11 @@
     }
 
     console.log('Total FunnelKit elements found:', fktElements.length);
+
+    // Store campaign metadata in flowData for debugging
+    flowData.campaignMetadata.campaignId = funnelId;
+    flowData.campaignMetadata.indexJsUrl = indexJsUrl;
+
     return fktElements;
   }
 

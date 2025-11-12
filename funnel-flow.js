@@ -103,6 +103,7 @@ function displayFlowData() {
 // Display current page info
 function displayCurrentPageInfo() {
   const info = flowData.currentPage;
+  const campaign = flowData.campaignMetadata || {};
   const infoEl = document.getElementById('currentPageInfo');
 
   infoEl.innerHTML = `
@@ -118,6 +119,23 @@ function displayCurrentPageInfo() {
       <span class="info-label">Analyzed:</span>
       <span class="info-value">${new Date(info.timestamp).toLocaleString()}</span>
     </div>
+    ${campaign.indexJsUrl ? `
+      <div class="page-info-item" style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-top: 8px;">
+        <span class="info-label">📄 Index.js:</span>
+        <a href="${campaign.indexJsUrl}" target="_blank" class="info-link">${campaign.indexJsUrl}</a>
+      </div>
+    ` : ''}
+    ${campaign.campaignId ? `
+      <div class="page-info-item" style="background: #d4edda; padding: 8px; border-radius: 4px; margin-top: 4px;">
+        <span class="info-label">🎯 Campaign ID:</span>
+        <span class="info-value" style="font-family: monospace; font-weight: bold;">${campaign.campaignId}</span>
+      </div>
+    ` : campaign.indexJsUrl ? `
+      <div class="page-info-item" style="background: #f8d7da; padding: 8px; border-radius: 4px; margin-top: 4px;">
+        <span class="info-label">⚠️ Campaign ID:</span>
+        <span class="info-value">Not Found - Check console logs or index.js file</span>
+      </div>
+    ` : ''}
   `;
 }
 
