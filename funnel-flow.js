@@ -261,107 +261,36 @@ function displayFunnelKitElements() {
   flowData.funnelKitElements.forEach((element, index) => {
     const hasPreviewUrl = element.constructedPreviewUrl !== null && element.constructedPreviewUrl !== '';
     const hasLiveUrl = element.constructedLiveUrl !== null && element.constructedLiveUrl !== '';
-    const hasLinkDetails = element.linkDetails !== null;
 
-    html += `
-      <div class="flow-item ${hasPreviewUrl || hasLiveUrl ? 'highlight-item' : ''}">
-        <div class="item-header">
-          <span class="item-icon">🎯</span>
-          <span class="item-title">${escapeHtml(element.text || element.elementId)}</span>
-          ${hasPreviewUrl ? '<span class="badge badge-important">Preview URL Available</span>' : ''}
-          ${hasLiveUrl ? '<span class="badge badge-data">Live URL Available</span>' : ''}
-        </div>
-        <div class="item-details">
-          <div class="detail-row">
-            <span class="detail-label">Element ID:</span>
-            <span class="detail-value">${element.elementId}</span>
+    // Determine which URL to show (prefer Live URL, fallback to Preview)
+    const nextPageUrl = hasLiveUrl ? element.constructedLiveUrl : (hasPreviewUrl ? element.constructedPreviewUrl : null);
+    const urlType = hasLiveUrl ? '🌐 Live URL' : (hasPreviewUrl ? '🔗 Preview URL' : null);
+
+    // Only show elements that have a next page URL
+    if (nextPageUrl) {
+      html += `
+        <div class="flow-item highlight-item">
+          <div class="item-header">
+            <span class="item-icon">🎯</span>
+            <span class="item-title">${escapeHtml(element.text || element.elementId)}</span>
+            <span class="badge ${hasLiveUrl ? 'badge-data' : 'badge-important'}">${urlType}</span>
           </div>
-          ${element.dataId && element.dataId !== element.elementId ? `
-            <div class="detail-row">
-              <span class="detail-label">Data-ID:</span>
-              <span class="detail-value">${element.dataId}</span>
-              <span class="badge badge-data" style="margin-left: 10px;">Found via data-id</span>
+          <div class="item-details">
+            <div class="detail-row highlight-detail">
+              <span class="detail-label">➡️ Next Page:</span>
+              <a href="${nextPageUrl}" target="_blank" class="detail-value link ${hasLiveUrl ? 'live-url' : 'preview-url'}">${escapeHtml(nextPageUrl)}</a>
             </div>
-          ` : ''}
-          ${element.discoveryMethod ? `
-            <div class="detail-row">
-              <span class="detail-label">Discovery Method:</span>
-              <span class="badge badge-important">${element.discoveryMethod}</span>
-            </div>
-          ` : ''}
-          <div class="detail-row">
-            <span class="detail-label">Tag:</span>
-            <span class="detail-value">${element.tagName.toUpperCase()}</span>
           </div>
-          ${element.classes.length > 0 ? `
-            <div class="detail-row">
-              <span class="detail-label">Classes:</span>
-              <span class="detail-value">${element.classes.join(', ')}</span>
-            </div>
-          ` : ''}
-          ${element.href ? `
-            <div class="detail-row">
-              <span class="detail-label">Original HREF:</span>
-              <a href="${element.href}" target="_blank" class="detail-value link">${escapeHtml(element.href)}</a>
-            </div>
-          ` : ''}
-          ${hasPreviewUrl ? `
-            <div class="detail-row highlight-detail">
-              <span class="detail-label">🔗 Preview URL:</span>
-              <a href="${element.constructedPreviewUrl}" target="_blank" class="detail-value link preview-url">${escapeHtml(element.constructedPreviewUrl)}</a>
-            </div>
-          ` : ''}
-          ${hasLiveUrl ? `
-            <div class="detail-row highlight-detail">
-              <span class="detail-label">🌐 Live URL:</span>
-              <a href="${element.constructedLiveUrl}" target="_blank" class="detail-value link live-url">${escapeHtml(element.constructedLiveUrl)}</a>
-            </div>
-          ` : ''}
-          ${element.targetPageInfo ? `
-            <div class="detail-row">
-              <span class="detail-label">Target Page Info:</span>
-              <div class="data-attrs">
-                <div class="data-attr-item">
-                  <span class="attr-key">targetPageReferenceId:</span>
-                  <span class="attr-value">${element.targetPageInfo.targetPageReferenceId || 'N/A'}</span>
-                </div>
-                <div class="data-attr-item">
-                  <span class="attr-key">targetPageViewReferenceId:</span>
-                  <span class="attr-value">${element.targetPageInfo.targetPageViewReferenceId || 'N/A'}</span>
-                </div>
-                ${element.targetPageInfo.urlSlug ? `
-                  <div class="data-attr-item">
-                    <span class="attr-key">urlSlug:</span>
-                    <span class="attr-value">${element.targetPageInfo.urlSlug}</span>
-                  </div>
-                ` : ''}
-                ${element.targetPageInfo.products && element.targetPageInfo.products.length > 0 ? `
-                  <div class="data-attr-item">
-                    <span class="attr-key">products:</span>
-                    <span class="attr-value">${element.targetPageInfo.products.join(', ')}</span>
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-          ` : ''}
-          ${hasLinkDetails ? `
-            <div class="detail-row">
-              <span class="detail-label">Link Details (Raw):</span>
-              <pre class="code-block">${escapeHtml(JSON.stringify(element.linkDetails, null, 2).substring(0, 500))}${JSON.stringify(element.linkDetails).length > 500 ? '...' : ''}</pre>
-            </div>
-          ` : ''}
-          ${Object.keys(element.dataAttributes).length > 0 ? `
-            <div class="detail-row">
-              <span class="detail-label">Data Attributes:</span>
-              <div class="data-attrs">${formatDataAttributes(element.dataAttributes)}</div>
-            </div>
-          ` : ''}
         </div>
-      </div>
-    `;
+      `;
+    }
   });
 
-  listEl.innerHTML = html;
+  if (html === '') {
+    listEl.innerHTML = '<div class="no-items">No elements with next page URLs found</div>';
+  } else {
+    listEl.innerHTML = html;
+  }
 }
 
 // Display links
