@@ -32,3 +32,4 @@ build/
 *.crx
 *.pem
 *.zip
+.env
