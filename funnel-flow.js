@@ -261,6 +261,7 @@ function displayFunnelKitElements() {
   flowData.funnelKitElements.forEach((element, index) => {
     const hasPreviewUrl = element.constructedPreviewUrl !== null && element.constructedPreviewUrl !== '';
     const hasLiveUrl = element.constructedLiveUrl !== null && element.constructedLiveUrl !== '';
+    const hasLinkDetails = element.linkDetails !== null;
 
     // Check if we have targetPageViewReferenceId but no URL
     const hasTargetPageId = element.targetPageInfo && element.targetPageInfo.targetPageViewReferenceId;
@@ -269,36 +270,50 @@ function displayFunnelKitElements() {
     const nextPageUrl = hasLiveUrl ? element.constructedLiveUrl : (hasPreviewUrl ? element.constructedPreviewUrl : null);
     const urlType = hasLiveUrl ? '🌐 Live URL' : (hasPreviewUrl ? '🔗 Preview URL' : null);
 
-    // Show elements that have either a URL OR linkDetails with targetPageViewReferenceId
-    if (nextPageUrl || hasTargetPageId) {
-      html += `
-        <div class="flow-item ${nextPageUrl ? 'highlight-item' : ''}">
-          <div class="item-header">
-            <span class="item-icon">🎯</span>
-            <span class="item-title">${escapeHtml(element.text || element.elementId)}</span>
-            ${nextPageUrl ? `<span class="badge ${hasLiveUrl ? 'badge-data' : 'badge-important'}">${urlType}</span>` : ''}
-            ${hasTargetPageId && !nextPageUrl ? '<span class="badge badge-warning">Needs Campaign ID</span>' : ''}
-          </div>
-          <div class="item-details">
-            ${nextPageUrl ? `
-              <div class="detail-row highlight-detail">
-                <span class="detail-label">➡️ Next Page:</span>
-                <a href="${nextPageUrl}" target="_blank" class="detail-value link ${hasLiveUrl ? 'live-url' : 'preview-url'}">${escapeHtml(nextPageUrl)}</a>
-              </div>
-            ` : hasTargetPageId ? `
-              <div class="detail-row">
-                <span class="detail-label">⚠️ Preview URL Pattern:</span>
-                <span class="detail-value">https://funnels-build.thisisatestsiteonly.com/<strong>[campaign-id]</strong>/${element.targetPageInfo.targetPageViewReferenceId}.html</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Target Page ID:</span>
-                <span class="detail-value">${element.targetPageInfo.targetPageViewReferenceId}</span>
-              </div>
-            ` : ''}
-          </div>
+    // Show ALL elements, with clear indication of their status
+    html += `
+      <div class="flow-item ${nextPageUrl ? 'highlight-item' : ''}">
+        <div class="item-header">
+          <span class="item-icon">${element.tagName === 'button' ? '🔘' : '🎯'}</span>
+          <span class="item-title">${escapeHtml(element.text || element.elementId)}</span>
+          ${nextPageUrl ? `<span class="badge ${hasLiveUrl ? 'badge-data' : 'badge-important'}">${urlType}</span>` : ''}
+          ${hasTargetPageId && !nextPageUrl ? '<span class="badge badge-warning">Needs Campaign ID</span>' : ''}
+          ${!hasLinkDetails ? '<span class="badge" style="background: #999;">No linkDetails</span>' : ''}
         </div>
-      `;
-    }
+        <div class="item-details">
+          <div class="detail-row">
+            <span class="detail-label">Element:</span>
+            <span class="detail-value">${element.tagName.toUpperCase()} - ID: ${element.elementId}</span>
+          </div>
+          ${element.dataId ? `
+            <div class="detail-row">
+              <span class="detail-label">Data-ID:</span>
+              <span class="detail-value">${element.dataId}</span>
+            </div>
+          ` : ''}
+          ${nextPageUrl ? `
+            <div class="detail-row highlight-detail">
+              <span class="detail-label">➡️ Next Page:</span>
+              <a href="${nextPageUrl}" target="_blank" class="detail-value link ${hasLiveUrl ? 'live-url' : 'preview-url'}">${escapeHtml(nextPageUrl)}</a>
+            </div>
+          ` : hasTargetPageId ? `
+            <div class="detail-row">
+              <span class="detail-label">⚠️ Preview URL Pattern:</span>
+              <span class="detail-value">https://funnels-build.thisisatestsiteonly.com/<strong>[campaign-id]</strong>/${element.targetPageInfo.targetPageViewReferenceId}.html</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Target Page ID:</span>
+              <span class="detail-value">${element.targetPageInfo.targetPageViewReferenceId}</span>
+            </div>
+          ` : !hasLinkDetails ? `
+            <div class="detail-row">
+              <span class="detail-label">⚠️ Status:</span>
+              <span class="detail-value">No navigation data found in window.linkDetails or window.buttonDetails</span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
   });
 
   if (html === '') {

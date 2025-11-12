@@ -467,10 +467,13 @@
       }
     });
 
-    // Also search for elements with data-id attributes that have linkDetails
-    // This catches elements that don't have fkt-* IDs but have ANY data-id with linkDetails
+    // Also search for ALL elements with data-id attributes starting with fkt-
+    // Show ALL of them, even if they don't have linkDetails
     try {
-      const elementsWithDataId = document.querySelectorAll('[data-id]');
+      console.log('=== Searching for all elements with fkt-* data-ids ===');
+      const elementsWithDataId = document.querySelectorAll('[data-id^="fkt-"]');
+      console.log(`Found ${elementsWithDataId.length} elements with fkt-* data-ids`);
+
       elementsWithDataId.forEach(el => {
         const dataId = el.getAttribute('data-id');
 
@@ -486,13 +489,17 @@
         if (window.linkDetails && window.linkDetails[dataId]) {
           hasLinkDetails = true;
           linkDetailsData = window.linkDetails[dataId];
+          console.log(`✓ ${dataId} has linkDetails:`, linkDetailsData);
         } else if (window.buttonDetails && window.buttonDetails[dataId]) {
           hasLinkDetails = true;
           linkDetailsData = window.buttonDetails[dataId];
+          console.log(`✓ ${dataId} has buttonDetails:`, linkDetailsData);
+        } else {
+          console.log(`✗ ${dataId} has NO linkDetails/buttonDetails`);
         }
 
-        // Only include if it has linkDetails
-        if (hasLinkDetails && linkDetailsData) {
+        // Include ALL fkt-* elements, regardless of whether they have linkDetails
+        {
           const elementId = el.id || dataId;
           foundElements.add(elementId);
 
