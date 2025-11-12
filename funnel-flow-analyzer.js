@@ -519,11 +519,20 @@
               if (el.id) idsToTry.push(el.id);
               if (dataId && dataId !== el.id) idsToTry.push(dataId);
 
+              console.log(`Checking CheckoutChamp functions availability for element ${el.id}:`);
+              console.log(`  - idsToTry:`, idsToTry);
+              console.log(`  - getNavigationItemFromPageData exists:`, typeof window.getNavigationItemFromPageData === 'function');
+              console.log(`  - getButtonOrLinkData exists:`, typeof window.getButtonOrLinkData === 'function');
+              console.log(`  - redirectPath exists:`, typeof window.redirectPath === 'function');
+              console.log(`  - pageData exists:`, !!window.pageData);
+
               if (idsToTry.length > 0 &&
                   typeof window.getNavigationItemFromPageData === 'function' &&
                   typeof window.getButtonOrLinkData === 'function' &&
                   typeof window.redirectPath === 'function' &&
                   window.pageData) {
+
+                console.log(`✓ All CheckoutChamp functions available, proceeding...`);
 
                 for (const buttonId of idsToTry) {
                   try {
@@ -700,11 +709,20 @@
             if (el.id) idsToTry2.push(el.id);
             if (dataId && dataId !== el.id) idsToTry2.push(dataId);
 
+            console.log(`[Data-ID Pass] Checking CheckoutChamp functions for element ${el.id || dataId}:`);
+            console.log(`  - idsToTry:`, idsToTry2);
+            console.log(`  - getNavigationItemFromPageData exists:`, typeof window.getNavigationItemFromPageData === 'function');
+            console.log(`  - getButtonOrLinkData exists:`, typeof window.getButtonOrLinkData === 'function');
+            console.log(`  - redirectPath exists:`, typeof window.redirectPath === 'function');
+            console.log(`  - pageData exists:`, !!window.pageData);
+
             if (idsToTry2.length > 0 &&
                 typeof window.getNavigationItemFromPageData === 'function' &&
                 typeof window.getButtonOrLinkData === 'function' &&
                 typeof window.redirectPath === 'function' &&
                 window.pageData) {
+
+              console.log(`✓ [Data-ID Pass] All CheckoutChamp functions available, proceeding...`);
 
               for (const buttonId of idsToTry2) {
                 try {
