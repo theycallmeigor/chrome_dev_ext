@@ -2,116 +2,53 @@
 // This script runs in the context of the webpage when "Analyze Funnel Flow" is clicked
 
 (function() {
-  // Helper to fetch and parse index.js for pageData
-  async function fetchPageData(indexJsUrl) {
-    try {
-      console.log('Fetching index.js:', indexJsUrl);
-      const response = await fetch(indexJsUrl);
-      const jsCode = await response.text();
+  // Helper to get data from page context via bridge
+  function getDataFromPageContext(buttonId = null) {
+    return new Promise((resolve) => {
+      const requestId = 'req_' + Date.now() + '_' + Math.random();
 
-      // Extract pageData from the JavaScript code
-      // Look for window.pageData = {...}
-      const pageDataMatch = jsCode.match(/window\.pageData\s*=\s*(\{[\s\S]*?\});/);
-      if (pageDataMatch) {
-        const pageDataJson = pageDataMatch[1];
-        const pageData = eval('(' + pageDataJson + ')');
-        console.log('✓ Extracted pageData from index.js:', pageData);
-        return pageData;
-      }
+      const timeout = setTimeout(() => {
+        window.removeEventListener('CHECKOUTCHAMP_DATA_RESPONSE', handler);
+        resolve({ success: false, error: 'Timeout waiting for bridge response' });
+      }, 5000);
 
-      console.log('✗ Could not find pageData in index.js');
-      return null;
-    } catch (e) {
-      console.log('Error fetching index.js:', e);
-      return null;
-    }
-  }
-
-  // Helper to get navigation URL using pageData (mimics CheckoutChamp logic)
-  function getNavigationUrl(buttonId, pageData) {
-    if (!pageData) {
-      return null;
-    }
-
-    // Method 1: Try to use CheckoutChamp's native functions if available
-    try {
-      if (typeof window.getNavigationItemFromPageData === 'function' &&
-          typeof window.getButtonOrLinkData === 'function' &&
-          typeof window.redirectPath === 'function') {
-
-        const navigationItem = window.getNavigationItemFromPageData(buttonId);
-        if (navigationItem) {
-          const pageType = pageData.pageTypeId ||
-                          (pageData.pageView && pageData.pageView[0] && pageData.pageView[0].pageTypeId) ||
-                          4; // default to checkout
-
-          const buttonData = window.getButtonOrLinkData(navigationItem, pageType);
-          if (buttonData) {
-            const targetUrl = window.redirectPath(buttonData, false); // false = no timestamp
-
-            if (targetUrl) {
-              // Determine if it's live or preview URL
-              const isLive = !targetUrl.includes('.html') && !targetUrl.includes('funnels-build.thisisatestsiteonly.com');
-              const isPreview = targetUrl.includes('.html') || targetUrl.includes('funnels-build.thisisatestsiteonly.com');
-
-              return {
-                url: targetUrl,
-                isLive: isLive,
-                isPreview: isPreview,
-                navigationItem: navigationItem,
-                funnelId: pageData.funnelData ? pageData.funnelData.referenceId : null
-              };
-            }
-          }
+      function handler(event) {
+        if (event.detail.requestId === requestId) {
+          clearTimeout(timeout);
+          window.removeEventListener('CHECKOUTCHAMP_DATA_RESPONSE', handler);
+          resolve(event.detail);
         }
       }
-    } catch (e) {
-      console.log('Error using native CheckoutChamp functions:', e);
-    }
 
-    // Method 2: Manual parsing as fallback
-    if (!pageData.funnelData || !pageData.funnelData.pages) {
-      return null;
-    }
+      window.addEventListener('CHECKOUTCHAMP_DATA_RESPONSE', handler);
 
-    // Find the button/link in pageData
-    let navigationItem = null;
-    for (const page of pageData.funnelData.pages) {
-      if (page.links) {
-        navigationItem = page.links.find(l => l.elementId === buttonId);
-        if (navigationItem) break;
-      }
-      if (page.buttons) {
-        navigationItem = page.buttons.find(b => b.elementId === buttonId);
-        if (navigationItem) break;
-      }
-    }
+      // Send request to bridge
+      window.dispatchEvent(new CustomEvent('CHECKOUTCHAMP_GET_DATA', {
+        detail: { requestId, buttonId }
+      }));
+    });
+  }
 
-    if (!navigationItem || !navigationItem.linkDetails || navigationItem.linkDetails.length === 0) {
-      return null;
-    }
+  // Helper to get navigation URL for a button using the page context bridge
+  async function getNavigationUrl(buttonId) {
+    console.log(`[Bridge] Requesting URL for button: ${buttonId}`);
+    const response = await getDataFromPageContext(buttonId);
 
-    const linkDetail = navigationItem.linkDetails[0];
+    if (response.success && response.data && response.data.url) {
+      const url = response.data.url;
+      const isLive = !url.includes('.html') && !url.includes('funnels-build.thisisatestsiteonly.com');
+      const isPreview = url.includes('.html') || url.includes('funnels-build.thisisatestsiteonly.com');
 
-    // If it has urlSlug, return live URL
-    if (linkDetail.urlSlug) {
       return {
-        url: linkDetail.urlSlug,
-        isLive: true,
-        navigationItem: navigationItem
+        url: url,
+        isLive: isLive,
+        isPreview: isPreview,
+        navigationItem: response.data.navigationItem,
+        funnelId: response.data.funnelId
       };
     }
 
-    // If it has targetPageViewReferenceId, return preview URL info
-    if (linkDetail.targetPageViewReferenceId) {
-      return {
-        url: linkDetail.targetPageViewReferenceId + '.html',
-        isPreview: true,
-        navigationItem: navigationItem,
-        funnelId: pageData.funnelData.referenceId
-      };
-    }
-
+    console.log(`[Bridge] Failed to get URL for ${buttonId}:`, response.error);
     return null;
   }
 
@@ -473,35 +410,18 @@
       console.log('Final Campaign/Funnel ID:', funnelId);
       console.log('Index.js URL:', indexJsUrl);
 
-      // Method 1: Try to get pageData from window.pageData (page context)
-      try {
-        if (window.pageData) {
-          pageData = window.pageData;
-          console.log('✓ Found pageData in window.pageData:', pageData);
-          if (!funnelId && pageData.funnelData) {
-            funnelId = pageData.funnelData.referenceId;
-            console.log('✓ Got funnelId from window.pageData:', funnelId);
-          }
-        } else {
-          console.log('✗ window.pageData not available');
+      // Get pageData from page context via bridge
+      console.log('[Bridge] Requesting pageData from page context...');
+      const pageDataResponse = await getDataFromPageContext();
+      if (pageDataResponse.success && pageDataResponse.data) {
+        pageData = pageDataResponse.data.pageData;
+        console.log('✓ [Bridge] Got pageData from page context:', pageData);
+        if (!funnelId && pageData && pageData.funnelData) {
+          funnelId = pageData.funnelData.referenceId;
+          console.log('✓ [Bridge] Got funnelId from pageData:', funnelId);
         }
-      } catch (e) {
-        console.log('Error accessing window.pageData:', e);
-      }
-
-      // Method 2: If window.pageData doesn't exist, fetch and parse from index.js
-      if (!pageData && indexJsUrl) {
-        pageData = await fetchPageData(indexJsUrl);
-        if (pageData) {
-          console.log('✓ Successfully fetched and parsed pageData from index.js');
-          // Use pageData to get funnelId if we don't have it yet
-          if (!funnelId && pageData.funnelData) {
-            funnelId = pageData.funnelData.referenceId;
-            console.log('✓ Got funnelId from pageData:', funnelId);
-          }
-        } else {
-          console.log('✗ Failed to fetch/parse pageData from index.js');
-        }
+      } else {
+        console.log('✗ [Bridge] Failed to get pageData:', pageDataResponse.error);
       }
 
       // Search ALL window variables for linkDetails data
@@ -664,13 +584,13 @@
               if (el.id) idsToTry.push(el.id);
               if (dataId && dataId !== el.id) idsToTry.push(dataId);
 
-              // Method 6: Use parsed pageData to get navigation URL
-              if (idsToTry.length > 0 && pageData) {
+              // Method 6: Use page context bridge to get navigation URL
+              if (idsToTry.length > 0) {
                 for (const buttonId of idsToTry) {
                   try {
-                    console.log(`Trying to get navigation URL for ${buttonId} from pageData...`);
+                    console.log(`Trying to get navigation URL for ${buttonId} via bridge...`);
 
-                    const urlResult = getNavigationUrl(buttonId, pageData);
+                    const urlResult = await getNavigationUrl(buttonId);
 
                     if (urlResult && urlResult.url) {
                       console.log(`🎯 Found URL for ${buttonId}:`, urlResult);
@@ -693,7 +613,7 @@
 
                       break; // Found URL, stop trying other IDs
                     } else {
-                      console.log(`✗ No URL found for ${buttonId} in pageData`);
+                      console.log(`✗ No URL found for ${buttonId}`);
                     }
                   } catch (e) {
                     console.log(`Error getting navigation URL for ${buttonId}:`, e);
@@ -829,18 +749,17 @@
             if (el.id) idsToTry2.push(el.id);
             if (dataId && dataId !== el.id) idsToTry2.push(dataId);
 
-            console.log(`[Data-ID Pass] Checking for element ${el.id || dataId} in pageData`);
+            console.log(`[Data-ID Pass] Checking for element ${el.id || dataId} via bridge`);
             console.log(`  - idsToTry:`, idsToTry2);
-            console.log(`  - pageData available:`, !!pageData);
 
-            if (idsToTry2.length > 0 && pageData) {
-              console.log(`✓ [Data-ID Pass] pageData available, proceeding...`);
+            if (idsToTry2.length > 0) {
+              console.log(`✓ [Data-ID Pass] Trying bridge for URL lookup...`);
 
               for (const buttonId of idsToTry2) {
                 try {
-                  console.log(`[Data-ID Pass] Trying to get navigation URL for ${buttonId} from pageData...`);
+                  console.log(`[Data-ID Pass] Trying to get navigation URL for ${buttonId} via bridge...`);
 
-                  const urlResult = getNavigationUrl(buttonId, pageData);
+                  const urlResult = await getNavigationUrl(buttonId);
 
                   if (urlResult && urlResult.url) {
                     console.log(`🎯 [Data-ID Pass] Found URL for ${buttonId}:`, urlResult);
@@ -864,7 +783,7 @@
 
                     break; // Found URL, stop trying other IDs
                   } else {
-                    console.log(`✗ [Data-ID Pass] No URL found for ${buttonId} in pageData`);
+                    console.log(`✗ [Data-ID Pass] No URL found for ${buttonId}`);
                   }
                 } catch (e) {
                   console.log(`[Data-ID Pass] Error getting navigation URL for ${buttonId}:`, e);
