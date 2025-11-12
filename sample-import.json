@@ -1,0 +1,28 @@
+{
+  "funnels": {
+    "04f618a8-d3b5-4c8c-bca4-8253efa531c6": {
+      "domain": "https://try.pelsbarn.org",
+      "firstSeen": "2025-11-10T20:45:24.638Z",
+      "lastSeen": "2025-11-10T20:45:24.638Z",
+      "name": "Funnel 1 - Premium Cozy Pelsbarn Sofa Bed",
+      "pages": {
+        "013ab84e-ae44-4f4d-9a22-88cecde24711": {
+          "externalURL": null,
+          "firstSeen": "2025-11-10T20:45:24.638Z",
+          "referenceId": "13c3e0f3-083b-4aff-a681-d7afe0943532",
+          "splitEnabled": false,
+          "title": "Pelsbarn Full Backrest Protector (Dave)",
+          "urlSlug": "PCSB-Sales"
+        },
+        "12bcc539-80d9-464d-a60d-4cb7f1ce8264": {
+          "externalURL": null,
+          "firstSeen": "2025-11-10T20:45:24.638Z",
+          "referenceId": "ec57dff5-2399-4222-8ab8-a99786fd4eb6",
+          "splitEnabled": false,
+          "title": "Listicle Full Backrest Protector (Dave)",
+          "urlSlug": "listcle-pcp"
+        }
+      }
+    }
+  }
+}

@@ -5,7 +5,7 @@ import type { ExtensionHistoricalData } from '@/lib/types';
 // POST /api/import - Import data from Chrome extension
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as ExtensionHistoricalData;
+    let body = await request.json();
 
     if (!body || typeof body !== 'object') {
       return NextResponse.json(
@@ -14,7 +14,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = importExtensionData(body);
+    // Handle wrapped format: { "funnels": { ... } }
+    // Extract the funnels object if it exists
+    let dataToImport: ExtensionHistoricalData;
+    if ('funnels' in body && typeof body.funnels === 'object') {
+      dataToImport = body.funnels as ExtensionHistoricalData;
+    } else {
+      // Assume it's already in the correct format
+      dataToImport = body as ExtensionHistoricalData;
+    }
+
+    const result = importExtensionData(dataToImport);
 
     if (!result.success) {
       return NextResponse.json(
