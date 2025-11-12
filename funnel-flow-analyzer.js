@@ -359,14 +359,43 @@
       console.log('Final Campaign/Funnel ID:', funnelId);
       console.log('Index.js URL:', indexJsUrl);
 
-      // Log ALL linkDetails keys for debugging
+      // Search ALL window variables for linkDetails data
+      console.log('=== Searching ALL window variables for linkDetails ===');
+      const allWindowKeys = Object.keys(window).filter(key => {
+        try {
+          const val = window[key];
+          if (!val || typeof val !== 'object') return false;
+
+          // Check if this object/array contains elementId and linkDetails properties
+          if (Array.isArray(val)) {
+            return val.some(item => item && item.elementId && item.linkDetails);
+          } else {
+            // Check if it's an object with elementId properties
+            return Object.values(val).some(item => item && item.elementId && item.linkDetails);
+          }
+        } catch (e) {
+          return false;
+        }
+      });
+
+      console.log('Found window variables containing linkDetails data:', allWindowKeys);
+      allWindowKeys.forEach(key => {
+        console.log(`window.${key}:`, window[key]);
+      });
+
+      // Log existing linkDetails/buttonDetails
       if (window.linkDetails) {
-        console.log('window.linkDetails keys:', Object.keys(window.linkDetails));
-        console.log('Full window.linkDetails:', window.linkDetails);
+        console.log('window.linkDetails type:', Array.isArray(window.linkDetails) ? 'Array' : 'Object');
+        console.log('window.linkDetails:', window.linkDetails);
+      } else {
+        console.log('window.linkDetails does NOT exist');
       }
+
       if (window.buttonDetails) {
-        console.log('window.buttonDetails keys:', Object.keys(window.buttonDetails));
-        console.log('Full window.buttonDetails:', window.buttonDetails);
+        console.log('window.buttonDetails type:', Array.isArray(window.buttonDetails) ? 'Array' : 'Object');
+        console.log('window.buttonDetails:', window.buttonDetails);
+      } else {
+        console.log('window.buttonDetails does NOT exist');
       }
     } catch (e) {
       console.log('Error finding campaign ID:', e);
