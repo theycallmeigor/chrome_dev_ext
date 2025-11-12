@@ -679,7 +679,7 @@
 
         // Skip if we already processed this element
         if (foundElements.has(el.id || dataId)) {
-          return;
+          continue;
         }
 
         // Check if this data-id has linkDetails
