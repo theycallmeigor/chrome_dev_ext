@@ -253,7 +253,7 @@ function displayFunnelKitElements() {
   const listEl = document.getElementById('funnelKitList');
 
   if (!flowData.funnelKitElements || flowData.funnelKitElements.length === 0) {
-    listEl.innerHTML = '<div class="no-items">No FunnelKit elements (fkt-link-*, fkt-button-*) found on this page</div>';
+    listEl.innerHTML = '<div class="no-items">No clickable elements with linkDetails found on this page</div>';
     return;
   }
 
@@ -262,24 +262,39 @@ function displayFunnelKitElements() {
     const hasPreviewUrl = element.constructedPreviewUrl !== null && element.constructedPreviewUrl !== '';
     const hasLiveUrl = element.constructedLiveUrl !== null && element.constructedLiveUrl !== '';
 
+    // Check if we have targetPageViewReferenceId but no URL
+    const hasTargetPageId = element.targetPageInfo && element.targetPageInfo.targetPageViewReferenceId;
+
     // Determine which URL to show (prefer Live URL, fallback to Preview)
     const nextPageUrl = hasLiveUrl ? element.constructedLiveUrl : (hasPreviewUrl ? element.constructedPreviewUrl : null);
     const urlType = hasLiveUrl ? '🌐 Live URL' : (hasPreviewUrl ? '🔗 Preview URL' : null);
 
-    // Only show elements that have a next page URL
-    if (nextPageUrl) {
+    // Show elements that have either a URL OR linkDetails with targetPageViewReferenceId
+    if (nextPageUrl || hasTargetPageId) {
       html += `
-        <div class="flow-item highlight-item">
+        <div class="flow-item ${nextPageUrl ? 'highlight-item' : ''}">
           <div class="item-header">
             <span class="item-icon">🎯</span>
             <span class="item-title">${escapeHtml(element.text || element.elementId)}</span>
-            <span class="badge ${hasLiveUrl ? 'badge-data' : 'badge-important'}">${urlType}</span>
+            ${nextPageUrl ? `<span class="badge ${hasLiveUrl ? 'badge-data' : 'badge-important'}">${urlType}</span>` : ''}
+            ${hasTargetPageId && !nextPageUrl ? '<span class="badge badge-warning">Needs Campaign ID</span>' : ''}
           </div>
           <div class="item-details">
-            <div class="detail-row highlight-detail">
-              <span class="detail-label">➡️ Next Page:</span>
-              <a href="${nextPageUrl}" target="_blank" class="detail-value link ${hasLiveUrl ? 'live-url' : 'preview-url'}">${escapeHtml(nextPageUrl)}</a>
-            </div>
+            ${nextPageUrl ? `
+              <div class="detail-row highlight-detail">
+                <span class="detail-label">➡️ Next Page:</span>
+                <a href="${nextPageUrl}" target="_blank" class="detail-value link ${hasLiveUrl ? 'live-url' : 'preview-url'}">${escapeHtml(nextPageUrl)}</a>
+              </div>
+            ` : hasTargetPageId ? `
+              <div class="detail-row">
+                <span class="detail-label">⚠️ Preview URL Pattern:</span>
+                <span class="detail-value">https://funnels-build.thisisatestsiteonly.com/<strong>[campaign-id]</strong>/${element.targetPageInfo.targetPageViewReferenceId}.html</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Target Page ID:</span>
+                <span class="detail-value">${element.targetPageInfo.targetPageViewReferenceId}</span>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -287,7 +302,7 @@ function displayFunnelKitElements() {
   });
 
   if (html === '') {
-    listEl.innerHTML = '<div class="no-items">No elements with next page URLs found</div>';
+    listEl.innerHTML = '<div class="no-items">No elements with next page information found</div>';
   } else {
     listEl.innerHTML = html;
   }

@@ -296,16 +296,30 @@
   function extractFunnelKitElements() {
     const fktElements = [];
 
-    // Get funnel ID from funnelData if available
+    // Get campaign/funnel ID - try multiple sources
     let funnelId = null;
     try {
+      // Method 1: From sessionStorage funnelData
       const funnelDataStr = sessionStorage.getItem('funnelData');
       if (funnelDataStr) {
         const funnelData = JSON.parse(funnelDataStr);
-        funnelId = funnelData.referenceId;
+        funnelId = funnelData.referenceId || funnelData.campaignId || funnelData.funnelId;
       }
+
+      // Method 2: From window objects
+      if (!funnelId && window.funnelId) {
+        funnelId = window.funnelId;
+      }
+      if (!funnelId && window.campaignId) {
+        funnelId = window.campaignId;
+      }
+      if (!funnelId && window.funnelData) {
+        funnelId = window.funnelData.referenceId || window.funnelData.campaignId || window.funnelData.funnelId;
+      }
+
+      console.log('Campaign/Funnel ID found:', funnelId);
     } catch (e) {
-      // Ignore
+      console.log('Error finding campaign ID:', e);
     }
 
     // Find all elements with IDs starting with fkt-link-, fkt-button-, etc.
