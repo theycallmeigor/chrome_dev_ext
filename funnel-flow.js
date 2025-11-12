@@ -37,6 +37,7 @@ function setupEventListeners() {
   document.getElementById('filterForms').addEventListener('click', () => applyFilter('forms'));
   document.getElementById('filterData').addEventListener('click', () => applyFilter('data'));
   document.getElementById('filterNav').addEventListener('click', () => applyFilter('nav'));
+  document.getElementById('filterFunnelKit').addEventListener('click', () => applyFilter('funnelkit'));
 }
 
 // Apply filter
@@ -49,12 +50,13 @@ function applyFilter(filter) {
 
   // Show/hide sections
   const sections = {
-    all: ['linksSection', 'buttonsSection', 'formsSection', 'dataSection', 'navSection', 'scriptsSection', 'navigationLogicSection', 'clickHandlersSection'],
+    all: ['funnelKitSection', 'linksSection', 'buttonsSection', 'formsSection', 'dataSection', 'navSection', 'scriptsSection', 'navigationLogicSection', 'clickHandlersSection'],
     links: ['linksSection'],
     buttons: ['buttonsSection'],
     forms: ['formsSection'],
     data: ['dataSection'],
-    nav: ['navSection']
+    nav: ['navSection'],
+    funnelkit: ['funnelKitSection']
   };
 
   document.querySelectorAll('.flow-section').forEach(section => {
@@ -87,6 +89,7 @@ function displayFlowData() {
   displayFlowDiagram();
 
   // Display sections
+  displayFunnelKitElements();
   displayLinks();
   displayButtons();
   displayForms();
@@ -127,6 +130,7 @@ function displayStats() {
   document.getElementById('totalScripts').textContent = flowData.summary.scriptsFound;
 
   // Update section counts
+  document.getElementById('funnelKitCount').textContent = flowData.summary.funnelKitElements || 0;
   document.getElementById('linksCount').textContent = flowData.summary.totalLinks;
   document.getElementById('buttonsCount').textContent = flowData.summary.totalButtons;
   document.getElementById('formsCount').textContent = flowData.summary.totalForms;
@@ -154,6 +158,36 @@ function displayFlowDiagram() {
 
   // Navigation paths (outgoing connections)
   html += '<div class="flow-paths">';
+
+  // Add FunnelKit elements first (highest priority)
+  if (flowData.funnelKitElements && flowData.funnelKitElements.length > 0) {
+    const fktWithUrls = flowData.funnelKitElements.filter(e => e.constructedPreviewUrl || e.constructedLiveUrl);
+
+    if (fktWithUrls.length > 0) {
+      html += '<div class="path-group">';
+      html += '<div class="path-label">🎯 FunnelKit Next Steps (with URLs):</div>';
+      fktWithUrls.slice(0, 8).forEach((fkt, index) => {
+        const url = fkt.constructedLiveUrl || fkt.constructedPreviewUrl;
+        const urlType = fkt.constructedLiveUrl ? 'Live' : 'Preview';
+        html += `
+          <div class="flow-node next-node fkt-node">
+            <div class="node-icon">🎯</div>
+            <div class="node-title">${escapeHtml(fkt.text.substring(0, 30) || fkt.elementId)}</div>
+            ${url ? `<div class="node-url">${escapeHtml(url)}</div>` : ''}
+            <div class="node-data">
+              <span class="badge badge-important">${urlType} URL</span>
+              ${fkt.targetPageInfo ? `
+                <div style="margin-top: 5px; font-size: 10px;">
+                  Target: ${fkt.targetPageInfo.targetPageViewReferenceId ? fkt.targetPageInfo.targetPageViewReferenceId.substring(0, 8) + '...' : 'N/A'}
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+  }
 
   // Add navigation elements as potential next steps
   if (flowData.navigationElements && flowData.navigationElements.length > 0) {
@@ -209,6 +243,109 @@ function displayFlowDiagram() {
   html += '</div>'; // end flow-visualization
 
   diagramEl.innerHTML = html;
+}
+
+// Display FunnelKit elements
+function displayFunnelKitElements() {
+  const listEl = document.getElementById('funnelKitList');
+
+  if (!flowData.funnelKitElements || flowData.funnelKitElements.length === 0) {
+    listEl.innerHTML = '<div class="no-items">No FunnelKit elements (fkt-link-*, fkt-button-*) found on this page</div>';
+    return;
+  }
+
+  let html = '';
+  flowData.funnelKitElements.forEach((element, index) => {
+    const hasPreviewUrl = element.constructedPreviewUrl !== null;
+    const hasLiveUrl = element.constructedLiveUrl !== null;
+    const hasLinkDetails = element.linkDetails !== null;
+
+    html += `
+      <div class="flow-item ${hasPreviewUrl ? 'highlight-item' : ''}">
+        <div class="item-header">
+          <span class="item-icon">🎯</span>
+          <span class="item-title">${escapeHtml(element.text || element.elementId)}</span>
+          ${hasPreviewUrl ? '<span class="badge badge-important">Preview URL Available</span>' : ''}
+          ${hasLiveUrl ? '<span class="badge badge-data">Live URL Available</span>' : ''}
+        </div>
+        <div class="item-details">
+          <div class="detail-row">
+            <span class="detail-label">Element ID:</span>
+            <span class="detail-value">${element.elementId}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Tag:</span>
+            <span class="detail-value">${element.tagName.toUpperCase()}</span>
+          </div>
+          ${element.classes.length > 0 ? `
+            <div class="detail-row">
+              <span class="detail-label">Classes:</span>
+              <span class="detail-value">${element.classes.join(', ')}</span>
+            </div>
+          ` : ''}
+          ${element.href ? `
+            <div class="detail-row">
+              <span class="detail-label">Original HREF:</span>
+              <a href="${element.href}" target="_blank" class="detail-value link">${escapeHtml(element.href)}</a>
+            </div>
+          ` : ''}
+          ${hasPreviewUrl ? `
+            <div class="detail-row highlight-detail">
+              <span class="detail-label">🔗 Preview URL:</span>
+              <a href="${element.constructedPreviewUrl}" target="_blank" class="detail-value link preview-url">${escapeHtml(element.constructedPreviewUrl)}</a>
+            </div>
+          ` : ''}
+          ${hasLiveUrl ? `
+            <div class="detail-row highlight-detail">
+              <span class="detail-label">🌐 Live URL:</span>
+              <a href="${element.constructedLiveUrl}" target="_blank" class="detail-value link live-url">${escapeHtml(element.constructedLiveUrl)}</a>
+            </div>
+          ` : ''}
+          ${element.targetPageInfo ? `
+            <div class="detail-row">
+              <span class="detail-label">Target Page Info:</span>
+              <div class="data-attrs">
+                <div class="data-attr-item">
+                  <span class="attr-key">targetPageReferenceId:</span>
+                  <span class="attr-value">${element.targetPageInfo.targetPageReferenceId || 'N/A'}</span>
+                </div>
+                <div class="data-attr-item">
+                  <span class="attr-key">targetPageViewReferenceId:</span>
+                  <span class="attr-value">${element.targetPageInfo.targetPageViewReferenceId || 'N/A'}</span>
+                </div>
+                ${element.targetPageInfo.urlSlug ? `
+                  <div class="data-attr-item">
+                    <span class="attr-key">urlSlug:</span>
+                    <span class="attr-value">${element.targetPageInfo.urlSlug}</span>
+                  </div>
+                ` : ''}
+                ${element.targetPageInfo.products && element.targetPageInfo.products.length > 0 ? `
+                  <div class="data-attr-item">
+                    <span class="attr-key">products:</span>
+                    <span class="attr-value">${element.targetPageInfo.products.join(', ')}</span>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          ` : ''}
+          ${hasLinkDetails ? `
+            <div class="detail-row">
+              <span class="detail-label">Link Details (Raw):</span>
+              <pre class="code-block">${escapeHtml(JSON.stringify(element.linkDetails, null, 2).substring(0, 500))}${JSON.stringify(element.linkDetails).length > 500 ? '...' : ''}</pre>
+            </div>
+          ` : ''}
+          ${Object.keys(element.dataAttributes).length > 0 ? `
+            <div class="detail-row">
+              <span class="detail-label">Data Attributes:</span>
+              <div class="data-attrs">${formatDataAttributes(element.dataAttributes)}</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  listEl.innerHTML = html;
 }
 
 // Display links

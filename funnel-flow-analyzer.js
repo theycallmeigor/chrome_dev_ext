@@ -13,7 +13,8 @@
     forms: [],
     dataAttributes: [],
     scripts: [],
-    navigationElements: []
+    navigationElements: [],
+    funnelKitElements: []
   };
 
   // 1. Extract all links with their attributes
@@ -291,6 +292,150 @@
     return navElements;
   }
 
+  // 10. Extract FunnelKit elements (fkt-link-*, fkt-button-*) and construct preview URLs
+  function extractFunnelKitElements() {
+    const fktElements = [];
+
+    // Get funnel ID from funnelData if available
+    let funnelId = null;
+    try {
+      const funnelDataStr = sessionStorage.getItem('funnelData');
+      if (funnelDataStr) {
+        const funnelData = JSON.parse(funnelDataStr);
+        funnelId = funnelData.referenceId;
+      }
+    } catch (e) {
+      // Ignore
+    }
+
+    // Find all elements with IDs starting with fkt-link-, fkt-button-, etc.
+    const fktSelectors = [
+      '[id^="fkt-link-"]',
+      '[id^="fkt-button-"]',
+      '[id^="fkt-btn-"]',
+      '[id^="fkt-"]'
+    ];
+
+    const foundElements = new Set();
+
+    fktSelectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          if (!foundElements.has(el.id)) {
+            foundElements.add(el.id);
+
+            const elementData = {
+              elementId: el.id,
+              tagName: el.tagName.toLowerCase(),
+              text: el.textContent.trim().substring(0, 100),
+              classes: Array.from(el.classList),
+              href: el.href || null,
+              onclick: el.onclick ? el.onclick.toString() : null,
+              dataAttributes: extractDataAttributes(el),
+              linkDetails: null,
+              constructedPreviewUrl: null,
+              targetPageInfo: null
+            };
+
+            // Try to find linkDetails or buttonDetails in window objects
+            // CheckoutChamp often stores these in global objects or data attributes
+            try {
+              // Method 1: Check if there's a global object with link/button details
+              if (window.linkDetails && window.linkDetails[el.id]) {
+                elementData.linkDetails = window.linkDetails[el.id];
+              } else if (window.buttonDetails && window.buttonDetails[el.id]) {
+                elementData.linkDetails = window.buttonDetails[el.id];
+              }
+
+              // Method 2: Check for data stored in element attributes
+              const elementDetailsAttr = el.getAttribute('data-link-details') || el.getAttribute('data-button-details');
+              if (elementDetailsAttr) {
+                try {
+                  elementData.linkDetails = JSON.parse(elementDetailsAttr);
+                } catch (e) {
+                  // Not valid JSON
+                }
+              }
+
+              // Method 3: Try to find in page's script objects
+              // Look for objects that might contain link mappings
+              const possibleObjects = ['pageData', 'funnelConfig', 'linkMap', 'buttonMap'];
+              possibleObjects.forEach(objName => {
+                if (window[objName] && typeof window[objName] === 'object') {
+                  // Search for this element ID in the object
+                  const found = findInObject(window[objName], el.id);
+                  if (found && found.linkDetails) {
+                    elementData.linkDetails = found.linkDetails;
+                  }
+                }
+              });
+
+              // If we found linkDetails, construct preview URL
+              if (elementData.linkDetails && Array.isArray(elementData.linkDetails)) {
+                const firstLink = elementData.linkDetails[0];
+                if (firstLink) {
+                  elementData.targetPageInfo = {
+                    targetPageReferenceId: firstLink.targetPageReferenceId,
+                    targetPageViewReferenceId: firstLink.targetPageViewReferenceId,
+                    urlSlug: firstLink.urlSlug,
+                    products: firstLink.products
+                  };
+
+                  // Construct preview URL if we have the necessary IDs
+                  if (firstLink.targetPageReferenceId && firstLink.targetPageViewReferenceId && funnelId) {
+                    elementData.constructedPreviewUrl =
+                      `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${firstLink.targetPageViewReferenceId}.html`;
+                  }
+
+                  // If there's a urlSlug, construct the live URL too
+                  if (firstLink.urlSlug) {
+                    const currentDomain = window.location.origin;
+                    elementData.constructedLiveUrl = `${currentDomain}/${firstLink.urlSlug}`;
+                  }
+                }
+              }
+            } catch (e) {
+              console.log('Error extracting FKT element details:', e);
+            }
+
+            fktElements.push(elementData);
+          }
+        });
+      } catch (e) {
+        // Invalid selector
+      }
+    });
+
+    return fktElements;
+  }
+
+  // Helper function to search for a value in nested objects
+  function findInObject(obj, searchValue, maxDepth = 3, currentDepth = 0) {
+    if (currentDepth > maxDepth) return null;
+
+    if (typeof obj !== 'object' || obj === null) return null;
+
+    // Check if this object has the elementId we're looking for
+    if (obj.elementId === searchValue) {
+      return obj;
+    }
+
+    // Search in nested properties
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+
+        if (typeof value === 'object' && value !== null) {
+          const found = findInObject(value, searchValue, maxDepth, currentDepth + 1);
+          if (found) return found;
+        }
+      }
+    }
+
+    return null;
+  }
+
   // Execute all extraction functions
   try {
     flowData.links = extractLinks();
@@ -301,6 +446,7 @@
     flowData.navigationElements = findNavigationElements();
     flowData.clickHandlers = analyzeClickHandlers();
     flowData.navigationLogic = extractNavigationLogic();
+    flowData.funnelKitElements = extractFunnelKitElements();
 
     // Add summary
     flowData.summary = {
@@ -310,6 +456,8 @@
       elementsWithDataAttrs: flowData.dataAttributes.length,
       scriptsFound: flowData.scripts.length,
       navigationElements: flowData.navigationElements.length,
+      funnelKitElements: flowData.funnelKitElements.length,
+      funnelKitWithPreviewUrls: flowData.funnelKitElements.filter(e => e.constructedPreviewUrl).length,
       hasIndexJs: flowData.scripts.some(s => s.isIndexJs)
     };
 

@@ -263,6 +263,12 @@ body {
   background: #e3f2fd;
 }
 
+.fkt-node {
+  border-color: #FF9800;
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+  border-width: 3px;
+}
+
 .node-icon {
   font-size: 32px;
   text-align: center;
@@ -335,6 +341,16 @@ body {
   margin-bottom: 15px;
   padding-bottom: 10px;
   border-bottom: 2px solid #667eea;
+}
+
+.section-description {
+  font-size: 13px;
+  color: #666;
+  background: #f8f9fa;
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  border-left: 3px solid #667eea;
 }
 
 .flow-items-list {
@@ -439,6 +455,24 @@ body {
 
 .detail-value.link:hover {
   text-decoration: underline;
+}
+
+.detail-row.highlight-detail {
+  background: #fff8e1;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 4px solid #FF9800;
+  margin: 5px 0;
+}
+
+.detail-value.preview-url {
+  color: #FF9800;
+  font-weight: 600;
+}
+
+.detail-value.live-url {
+  color: #4CAF50;
+  font-weight: 600;
 }
 
 .code-block {
