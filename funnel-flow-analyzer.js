@@ -29,7 +29,48 @@
 
   // Helper to get navigation URL using pageData (mimics CheckoutChamp logic)
   function getNavigationUrl(buttonId, pageData) {
-    if (!pageData || !pageData.funnelData || !pageData.funnelData.pages) {
+    if (!pageData) {
+      return null;
+    }
+
+    // Method 1: Try to use CheckoutChamp's native functions if available
+    try {
+      if (typeof window.getNavigationItemFromPageData === 'function' &&
+          typeof window.getButtonOrLinkData === 'function' &&
+          typeof window.redirectPath === 'function') {
+
+        const navigationItem = window.getNavigationItemFromPageData(buttonId);
+        if (navigationItem) {
+          const pageType = pageData.pageTypeId ||
+                          (pageData.pageView && pageData.pageView[0] && pageData.pageView[0].pageTypeId) ||
+                          4; // default to checkout
+
+          const buttonData = window.getButtonOrLinkData(navigationItem, pageType);
+          if (buttonData) {
+            const targetUrl = window.redirectPath(buttonData, false); // false = no timestamp
+
+            if (targetUrl) {
+              // Determine if it's live or preview URL
+              const isLive = !targetUrl.includes('.html') && !targetUrl.includes('funnels-build.thisisatestsiteonly.com');
+              const isPreview = targetUrl.includes('.html') || targetUrl.includes('funnels-build.thisisatestsiteonly.com');
+
+              return {
+                url: targetUrl,
+                isLive: isLive,
+                isPreview: isPreview,
+                navigationItem: navigationItem,
+                funnelId: pageData.funnelData ? pageData.funnelData.referenceId : null
+              };
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Error using native CheckoutChamp functions:', e);
+    }
+
+    // Method 2: Manual parsing as fallback
+    if (!pageData.funnelData || !pageData.funnelData.pages) {
       return null;
     }
 
@@ -375,6 +416,7 @@
     // Get campaign/funnel ID - try multiple sources
     let funnelId = null;
     let indexJsUrl = null;
+    let pageData = null; // Declare at function level so it's available everywhere
 
     try {
       console.log('=== Searching for Campaign/Funnel ID ===');
@@ -431,9 +473,24 @@
       console.log('Final Campaign/Funnel ID:', funnelId);
       console.log('Index.js URL:', indexJsUrl);
 
-      // Fetch and parse pageData from index.js
-      let pageData = null;
-      if (indexJsUrl) {
+      // Method 1: Try to get pageData from window.pageData (page context)
+      try {
+        if (window.pageData) {
+          pageData = window.pageData;
+          console.log('✓ Found pageData in window.pageData:', pageData);
+          if (!funnelId && pageData.funnelData) {
+            funnelId = pageData.funnelData.referenceId;
+            console.log('✓ Got funnelId from window.pageData:', funnelId);
+          }
+        } else {
+          console.log('✗ window.pageData not available');
+        }
+      } catch (e) {
+        console.log('Error accessing window.pageData:', e);
+      }
+
+      // Method 2: If window.pageData doesn't exist, fetch and parse from index.js
+      if (!pageData && indexJsUrl) {
         pageData = await fetchPageData(indexJsUrl);
         if (pageData) {
           console.log('✓ Successfully fetched and parsed pageData from index.js');
