@@ -454,9 +454,9 @@
     });
 
     // Also search for elements with data-id attributes that have linkDetails
-    // This catches elements that don't have fkt-* IDs but have fkt-* data-ids with linkDetails
+    // This catches elements that don't have fkt-* IDs but have ANY data-id with linkDetails
     try {
-      const elementsWithDataId = document.querySelectorAll('[data-id^="fkt-"]');
+      const elementsWithDataId = document.querySelectorAll('[data-id]');
       elementsWithDataId.forEach(el => {
         const dataId = el.getAttribute('data-id');
 
