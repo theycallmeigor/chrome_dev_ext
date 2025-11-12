@@ -1012,40 +1012,40 @@
     return null;
   }
 
-  // Execute all extraction functions
-  (async function() {
-  try {
-    flowData.links = extractLinks();
-    flowData.buttons = extractButtons();
-    flowData.forms = extractForms();
-    flowData.dataAttributes = extractDataIdElements();
-    flowData.scripts = extractScripts();
-    flowData.navigationElements = findNavigationElements();
-    flowData.clickHandlers = analyzeClickHandlers();
-    flowData.navigationLogic = extractNavigationLogic();
-    flowData.funnelKitElements = await extractFunnelKitElements();
+  // Execute all extraction functions asynchronously and return a promise
+  return (async function() {
+    try {
+      flowData.links = extractLinks();
+      flowData.buttons = extractButtons();
+      flowData.forms = extractForms();
+      flowData.dataAttributes = extractDataIdElements();
+      flowData.scripts = extractScripts();
+      flowData.navigationElements = findNavigationElements();
+      flowData.clickHandlers = analyzeClickHandlers();
+      flowData.navigationLogic = extractNavigationLogic();
+      flowData.funnelKitElements = await extractFunnelKitElements();
 
-    // Add summary
-    flowData.summary = {
-      totalLinks: flowData.links.length,
-      totalButtons: flowData.buttons.length,
-      totalForms: flowData.forms.length,
-      elementsWithDataAttrs: flowData.dataAttributes.length,
-      scriptsFound: flowData.scripts.length,
-      navigationElements: flowData.navigationElements.length,
-      funnelKitElements: flowData.funnelKitElements.length,
-      funnelKitWithPreviewUrls: flowData.funnelKitElements.filter(e => e.constructedPreviewUrl).length,
-      hasIndexJs: flowData.scripts.some(s => s.isIndexJs)
-    };
+      // Add summary
+      flowData.summary = {
+        totalLinks: flowData.links.length,
+        totalButtons: flowData.buttons.length,
+        totalForms: flowData.forms.length,
+        elementsWithDataAttrs: flowData.dataAttributes.length,
+        scriptsFound: flowData.scripts.length,
+        navigationElements: flowData.navigationElements.length,
+        funnelKitElements: flowData.funnelKitElements.length,
+        funnelKitWithPreviewUrls: flowData.funnelKitElements.filter(e => e.constructedPreviewUrl).length,
+        hasIndexJs: flowData.scripts.some(s => s.isIndexJs)
+      };
 
-    console.log('Funnel Flow Analysis Complete:', flowData);
-    return flowData;
-  } catch (error) {
-    console.error('Error in funnel flow analysis:', error);
-    return {
-      error: error.message,
-      currentPage: flowData.currentPage
-    };
-  }
+      console.log('Funnel Flow Analysis Complete:', flowData);
+      return flowData;
+    } catch (error) {
+      console.error('Error in funnel flow analysis:', error);
+      return {
+        error: error.message,
+        currentPage: flowData.currentPage
+      };
+    }
   })();
 })();
