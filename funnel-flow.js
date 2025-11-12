@@ -161,14 +161,17 @@ function displayFlowDiagram() {
 
   // Add FunnelKit elements first (highest priority)
   if (flowData.funnelKitElements && flowData.funnelKitElements.length > 0) {
-    const fktWithUrls = flowData.funnelKitElements.filter(e => e.constructedPreviewUrl || e.constructedLiveUrl);
+    const fktWithUrls = flowData.funnelKitElements.filter(e =>
+      (e.constructedPreviewUrl && e.constructedPreviewUrl !== '') ||
+      (e.constructedLiveUrl && e.constructedLiveUrl !== '')
+    );
 
     if (fktWithUrls.length > 0) {
       html += '<div class="path-group">';
       html += '<div class="path-label">🎯 FunnelKit Next Steps (with URLs):</div>';
       fktWithUrls.slice(0, 8).forEach((fkt, index) => {
-        const url = fkt.constructedLiveUrl || fkt.constructedPreviewUrl;
-        const urlType = fkt.constructedLiveUrl ? 'Live' : 'Preview';
+        const url = (fkt.constructedLiveUrl && fkt.constructedLiveUrl !== '') ? fkt.constructedLiveUrl : fkt.constructedPreviewUrl;
+        const urlType = (fkt.constructedLiveUrl && fkt.constructedLiveUrl !== '') ? 'Live' : 'Preview';
         html += `
           <div class="flow-node next-node fkt-node">
             <div class="node-icon">🎯</div>
@@ -256,12 +259,12 @@ function displayFunnelKitElements() {
 
   let html = '';
   flowData.funnelKitElements.forEach((element, index) => {
-    const hasPreviewUrl = element.constructedPreviewUrl !== null;
-    const hasLiveUrl = element.constructedLiveUrl !== null;
+    const hasPreviewUrl = element.constructedPreviewUrl !== null && element.constructedPreviewUrl !== '';
+    const hasLiveUrl = element.constructedLiveUrl !== null && element.constructedLiveUrl !== '';
     const hasLinkDetails = element.linkDetails !== null;
 
     html += `
-      <div class="flow-item ${hasPreviewUrl ? 'highlight-item' : ''}">
+      <div class="flow-item ${hasPreviewUrl || hasLiveUrl ? 'highlight-item' : ''}">
         <div class="item-header">
           <span class="item-icon">🎯</span>
           <span class="item-title">${escapeHtml(element.text || element.elementId)}</span>

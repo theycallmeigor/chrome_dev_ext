@@ -309,11 +309,13 @@
     }
 
     // Find all elements with IDs starting with fkt-link-, fkt-button-, etc.
+    // Prioritize clickable elements, exclude images and other non-clickable elements
     const fktSelectors = [
-      '[id^="fkt-link-"]',
-      '[id^="fkt-button-"]',
-      '[id^="fkt-btn-"]',
-      '[id^="fkt-"]'
+      'a[id^="fkt-link-"]',
+      'button[id^="fkt-button-"]',
+      'button[id^="fkt-btn-"]',
+      '[role="button"][id^="fkt-"]',
+      'a[id^="fkt-"]'
     ];
 
     const foundElements = new Set();
@@ -335,20 +337,51 @@
               dataAttributes: extractDataAttributes(el),
               linkDetails: null,
               constructedPreviewUrl: null,
+              constructedLiveUrl: null,
               targetPageInfo: null
             };
 
-            // Try to find linkDetails or buttonDetails in window objects
-            // CheckoutChamp often stores these in global objects or data attributes
+            // Try to find linkDetails or extract URLs from existing href
             try {
-              // Method 1: Check if there's a global object with link/button details
+              // Method 1: Check if element already has an href (for <a> tags)
+              if (el.href && el.tagName.toLowerCase() === 'a') {
+                const href = el.href;
+
+                // Check if it's a preview URL
+                if (href.includes('funnels-build.thisisatestsiteonly.com')) {
+                  elementData.constructedPreviewUrl = href;
+
+                  // Try to extract the pageViewId from the URL
+                  const match = href.match(/\/([a-f0-9-]{36})\.html/i);
+                  if (match) {
+                    elementData.targetPageInfo = {
+                      targetPageViewReferenceId: match[1]
+                    };
+                  }
+                }
+                // Check if it's a live URL (same domain as current page)
+                else if (href.startsWith(window.location.origin) && href !== window.location.href) {
+                  elementData.constructedLiveUrl = href;
+
+                  // Extract urlSlug
+                  const urlPath = href.replace(window.location.origin + '/', '');
+                  if (urlPath && !urlPath.includes('http')) {
+                    if (!elementData.targetPageInfo) {
+                      elementData.targetPageInfo = {};
+                    }
+                    elementData.targetPageInfo.urlSlug = urlPath;
+                  }
+                }
+              }
+
+              // Method 2: Check if there's a global object with link/button details
               if (window.linkDetails && window.linkDetails[el.id]) {
                 elementData.linkDetails = window.linkDetails[el.id];
               } else if (window.buttonDetails && window.buttonDetails[el.id]) {
                 elementData.linkDetails = window.buttonDetails[el.id];
               }
 
-              // Method 2: Check for data stored in element attributes
+              // Method 3: Check for data stored in element attributes
               const elementDetailsAttr = el.getAttribute('data-link-details') || el.getAttribute('data-button-details');
               if (elementDetailsAttr) {
                 try {
@@ -358,7 +391,7 @@
                 }
               }
 
-              // Method 3: Try to find in page's script objects
+              // Method 4: Try to find in page's script objects
               // Look for objects that might contain link mappings
               const possibleObjects = ['pageData', 'funnelConfig', 'linkMap', 'buttonMap'];
               possibleObjects.forEach(objName => {
@@ -371,25 +404,38 @@
                 }
               });
 
-              // If we found linkDetails, construct preview URL
+              // Method 5: Check data-id attribute for alternate IDs
+              const dataId = el.getAttribute('data-id');
+              if (dataId && !elementData.linkDetails) {
+                // Try to find linkDetails using the data-id
+                if (window.linkDetails && window.linkDetails[dataId]) {
+                  elementData.linkDetails = window.linkDetails[dataId];
+                } else if (window.buttonDetails && window.buttonDetails[dataId]) {
+                  elementData.linkDetails = window.buttonDetails[dataId];
+                }
+              }
+
+              // If we found linkDetails, construct preview URL (if not already found from href)
               if (elementData.linkDetails && Array.isArray(elementData.linkDetails)) {
                 const firstLink = elementData.linkDetails[0];
                 if (firstLink) {
-                  elementData.targetPageInfo = {
-                    targetPageReferenceId: firstLink.targetPageReferenceId,
-                    targetPageViewReferenceId: firstLink.targetPageViewReferenceId,
-                    urlSlug: firstLink.urlSlug,
-                    products: firstLink.products
-                  };
+                  if (!elementData.targetPageInfo) {
+                    elementData.targetPageInfo = {};
+                  }
 
-                  // Construct preview URL if we have the necessary IDs
-                  if (firstLink.targetPageReferenceId && firstLink.targetPageViewReferenceId && funnelId) {
+                  elementData.targetPageInfo.targetPageReferenceId = firstLink.targetPageReferenceId;
+                  elementData.targetPageInfo.targetPageViewReferenceId = firstLink.targetPageViewReferenceId;
+                  elementData.targetPageInfo.urlSlug = firstLink.urlSlug;
+                  elementData.targetPageInfo.products = firstLink.products;
+
+                  // Construct preview URL if we don't already have one
+                  if (!elementData.constructedPreviewUrl && firstLink.targetPageViewReferenceId && funnelId) {
                     elementData.constructedPreviewUrl =
                       `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${firstLink.targetPageViewReferenceId}.html`;
                   }
 
-                  // If there's a urlSlug, construct the live URL too
-                  if (firstLink.urlSlug) {
+                  // Construct live URL if we don't already have one
+                  if (!elementData.constructedLiveUrl && firstLink.urlSlug) {
                     const currentDomain = window.location.origin;
                     elementData.constructedLiveUrl = `${currentDomain}/${firstLink.urlSlug}`;
                   }
