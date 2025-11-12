@@ -559,6 +559,124 @@
       console.log('Error searching for data-id elements:', e);
     }
 
+    // Search by pageViewReferenceId to find elements that match targetPageViewReferenceId in linkDetails
+    // This helps identify destination pages
+    try {
+      console.log('Searching for elements with pageViewReferenceId attributes...');
+
+      // Get current page's pageViewReferenceId if it exists
+      const currentPageViewRefId = sessionStorage.getItem('pageViewReferenceId') ||
+                                    document.body.getAttribute('data-page-view-reference-id');
+
+      console.log('Current page pageViewReferenceId:', currentPageViewRefId);
+
+      // Collect all unique targetPageViewReferenceIds from linkDetails
+      const allLinkDetails = {};
+      if (window.linkDetails) {
+        Object.assign(allLinkDetails, window.linkDetails);
+      }
+      if (window.buttonDetails) {
+        Object.assign(allLinkDetails, window.buttonDetails);
+      }
+
+      console.log('All linkDetails keys:', Object.keys(allLinkDetails));
+
+      // Map targetPageViewReferenceIds to their source elements
+      const targetPageMap = new Map();
+      Object.entries(allLinkDetails).forEach(([elementKey, details]) => {
+        if (Array.isArray(details)) {
+          details.forEach(linkDetail => {
+            if (linkDetail.targetPageViewReferenceId) {
+              if (!targetPageMap.has(linkDetail.targetPageViewReferenceId)) {
+                targetPageMap.set(linkDetail.targetPageViewReferenceId, []);
+              }
+              targetPageMap.get(linkDetail.targetPageViewReferenceId).push({
+                sourceElementId: elementKey,
+                linkDetail: linkDetail
+              });
+            }
+          });
+        }
+      });
+
+      console.log('Found targetPageViewReferenceIds:', Array.from(targetPageMap.keys()));
+
+      // Add all elements that have linkDetails pointing to other pages
+      targetPageMap.forEach((sources, targetPageViewRefId) => {
+        sources.forEach(source => {
+          const elementId = source.sourceElementId;
+
+          // Skip if already processed
+          if (foundElements.has(elementId)) {
+            return;
+          }
+
+          // Try to find the element in DOM
+          let el = document.getElementById(elementId);
+
+          // If not found, try finding by data-id
+          if (!el) {
+            el = document.querySelector(`[data-id="${elementId}"]`);
+          }
+
+          if (el) {
+            foundElements.add(elementId);
+
+            const elementData = {
+              elementId: elementId,
+              tagName: el.tagName.toLowerCase(),
+              text: el.textContent.trim().substring(0, 100),
+              classes: Array.from(el.classList),
+              href: el.href || null,
+              onclick: el.onclick ? el.onclick.toString() : null,
+              dataAttributes: extractDataAttributes(el),
+              linkDetails: [source.linkDetail],
+              constructedPreviewUrl: null,
+              constructedLiveUrl: null,
+              targetPageInfo: null,
+              discoveryMethod: 'targetPageViewReferenceId'
+            };
+
+            // Extract URL from href if exists
+            if (el.href && el.tagName.toLowerCase() === 'a') {
+              const href = el.href;
+              if (href.includes('funnels-build.thisisatestsiteonly.com')) {
+                elementData.constructedPreviewUrl = href;
+              } else if (href.startsWith(window.location.origin) && href !== window.location.href) {
+                elementData.constructedLiveUrl = href;
+              }
+            }
+
+            // Process linkDetails to construct URLs
+            const linkDetail = source.linkDetail;
+            elementData.targetPageInfo = {
+              targetPageReferenceId: linkDetail.targetPageReferenceId,
+              targetPageViewReferenceId: linkDetail.targetPageViewReferenceId,
+              urlSlug: linkDetail.urlSlug,
+              products: linkDetail.products
+            };
+
+            // Construct preview URL if not already set
+            if (!elementData.constructedPreviewUrl && linkDetail.targetPageViewReferenceId && funnelId) {
+              elementData.constructedPreviewUrl =
+                `https://funnels-build.thisisatestsiteonly.com/${funnelId}/${linkDetail.targetPageViewReferenceId}.html`;
+            }
+
+            // Construct live URL if not already set
+            if (!elementData.constructedLiveUrl && linkDetail.urlSlug) {
+              elementData.constructedLiveUrl = `${window.location.origin}/${linkDetail.urlSlug}`;
+            }
+
+            fktElements.push(elementData);
+            console.log('Added element via targetPageViewReferenceId:', elementId);
+          }
+        });
+      });
+    } catch (e) {
+      console.log('Error searching by targetPageViewReferenceId:', e);
+    }
+
+    console.log('Total FunnelKit elements found:', fktElements.length);
     return fktElements;
   }
 

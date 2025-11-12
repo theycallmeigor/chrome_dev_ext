@@ -283,6 +283,12 @@ function displayFunnelKitElements() {
               <span class="badge badge-data" style="margin-left: 10px;">Found via data-id</span>
             </div>
           ` : ''}
+          ${element.discoveryMethod ? `
+            <div class="detail-row">
+              <span class="detail-label">Discovery Method:</span>
+              <span class="badge badge-important">${element.discoveryMethod}</span>
+            </div>
+          ` : ''}
           <div class="detail-row">
             <span class="detail-label">Tag:</span>
             <span class="detail-value">${element.tagName.toUpperCase()}</span>
