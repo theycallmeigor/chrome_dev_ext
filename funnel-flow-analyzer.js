@@ -478,10 +478,10 @@
 
     const foundElements = new Set();
 
-    fktSelectors.forEach(selector => {
+    for (const selector of fktSelectors) {
       try {
         const elements = document.querySelectorAll(selector);
-        elements.forEach(el => {
+        for (const el of elements) {
           if (!foundElements.has(el.id)) {
             foundElements.add(el.id);
 
@@ -661,11 +661,11 @@
 
             fktElements.push(elementData);
           }
-        });
+        }
       } catch (e) {
         // Invalid selector
       }
-    });
+    }
 
     // Also search for ALL elements with data-id attributes starting with fkt-
     // Show ALL of them, even if they don't have linkDetails
@@ -674,7 +674,7 @@
       const elementsWithDataId = document.querySelectorAll('[data-id^="fkt-"]');
       console.log(`Found ${elementsWithDataId.length} elements with fkt-* data-ids`);
 
-      elementsWithDataId.forEach(el => {
+      for (const el of elementsWithDataId) {
         const dataId = el.getAttribute('data-id');
 
         // Skip if we already processed this element
@@ -823,7 +823,7 @@
 
           fktElements.push(elementData);
         }
-      });
+      }
     } catch (e) {
       console.log('Error searching for data-id elements:', e);
     }
