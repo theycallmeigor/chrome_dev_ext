@@ -513,6 +513,51 @@
                 }
               }
 
+              // Method 6: Use CheckoutChamp's native functions to get the actual URL
+              if (dataId && typeof window.getNavigationItemFromPageData === 'function' &&
+                  typeof window.getButtonOrLinkData === 'function' &&
+                  typeof window.redirectPath === 'function' &&
+                  window.pageData) {
+
+                try {
+                  console.log(`Trying CheckoutChamp functions for ${dataId}...`);
+
+                  const navigationItem = window.getNavigationItemFromPageData(dataId);
+                  if (navigationItem) {
+                    console.log(`✓ Found navigation item for ${dataId}:`, navigationItem);
+
+                    // Get page type
+                    const pageType = window.pageData.pageTypeId ||
+                                   (window.pageData.pageView && window.pageData.pageView[0] && window.pageData.pageView[0].pageTypeId) ||
+                                   4; // default to checkout
+
+                    const buttonData = window.getButtonOrLinkData(navigationItem, pageType);
+                    if (buttonData) {
+                      console.log(`✓ Got button data for ${dataId}:`, buttonData);
+
+                      const targetUrl = window.redirectPath(buttonData, false); // false = no timestamp
+                      if (targetUrl) {
+                        console.log(`🎯 CheckoutChamp URL for ${dataId}: ${targetUrl}`);
+
+                        // Store the URL based on whether it's preview or live
+                        if (targetUrl.includes('funnels-build.thisisatestsiteonly.com')) {
+                          elementData.constructedPreviewUrl = targetUrl;
+                        } else {
+                          elementData.constructedLiveUrl = targetUrl;
+                        }
+
+                        // Also store the navigation item data
+                        elementData.linkDetails = navigationItem.linkDetails || [navigationItem];
+                      }
+                    }
+                  } else {
+                    console.log(`✗ No navigation item found for ${dataId} in pageData`);
+                  }
+                } catch (e) {
+                  console.log(`Error using CheckoutChamp functions for ${dataId}:`, e);
+                }
+              }
+
               // If we found linkDetails, construct preview URL (if not already found from href)
               if (elementData.linkDetails && Array.isArray(elementData.linkDetails)) {
                 const firstLink = elementData.linkDetails[0];
@@ -632,6 +677,54 @@
                   }
                   elementData.targetPageInfo.urlSlug = urlPath;
                 }
+              }
+            }
+
+            // Use CheckoutChamp's native functions to get the actual URL
+            if (dataId && typeof window.getNavigationItemFromPageData === 'function' &&
+                typeof window.getButtonOrLinkData === 'function' &&
+                typeof window.redirectPath === 'function' &&
+                window.pageData) {
+
+              try {
+                console.log(`[Data-ID Pass] Trying CheckoutChamp functions for ${dataId}...`);
+
+                const navigationItem = window.getNavigationItemFromPageData(dataId);
+                if (navigationItem) {
+                  console.log(`✓ [Data-ID Pass] Found navigation item for ${dataId}:`, navigationItem);
+
+                  // Get page type
+                  const pageType = window.pageData.pageTypeId ||
+                                 (window.pageData.pageView && window.pageData.pageView[0] && window.pageData.pageView[0].pageTypeId) ||
+                                 4; // default to checkout
+
+                  const buttonData = window.getButtonOrLinkData(navigationItem, pageType);
+                  if (buttonData) {
+                    console.log(`✓ [Data-ID Pass] Got button data for ${dataId}:`, buttonData);
+
+                    const targetUrl = window.redirectPath(buttonData, false); // false = no timestamp
+                    if (targetUrl) {
+                      console.log(`🎯 [Data-ID Pass] CheckoutChamp URL for ${dataId}: ${targetUrl}`);
+
+                      // Store the URL based on whether it's preview or live
+                      if (targetUrl.includes('funnels-build.thisisatestsiteonly.com')) {
+                        elementData.constructedPreviewUrl = targetUrl;
+                      } else {
+                        elementData.constructedLiveUrl = targetUrl;
+                      }
+
+                      // Also store the navigation item data
+                      if (!linkDetailsData) {
+                        linkDetailsData = navigationItem.linkDetails || [navigationItem];
+                        elementData.linkDetails = linkDetailsData;
+                      }
+                    }
+                  }
+                } else {
+                  console.log(`✗ [Data-ID Pass] No navigation item found for ${dataId} in pageData`);
+                }
+              } catch (e) {
+                console.log(`[Data-ID Pass] Error using CheckoutChamp functions for ${dataId}:`, e);
               }
             }
 
