@@ -59,11 +59,12 @@ async function triggerAutoImport() {
     }
 
     if (result.count > 0) {
-      showImportStatus('success', `✓ Successfully imported ${result.count} file(s) from folder!`);
-      updateImportStats(result.count, Date.now());
+      const dbInfo = result.newFunnels ? ` (${result.newFunnels} funnel(s), ${result.newPages} page(s) added to database)` : '';
+      showImportStatus('success', `✓ Successfully imported ${result.count} file(s) from folder!${dbInfo}`);
+      updateImportStats(result.count, Date.now(), result.newFunnels, result.newPages);
     } else {
       showImportStatus('info', 'No JSON files found in folder.');
-      updateImportStats(0, Date.now());
+      updateImportStats(0, Date.now(), 0, 0);
     }
   } catch (e) {
     console.error('Error during auto-import:', e);
@@ -72,11 +73,11 @@ async function triggerAutoImport() {
 }
 
 // Update import statistics display
-function updateImportStats(count, timestamp) {
+function updateImportStats(count, timestamp, newFunnels, newPages) {
   const statsEl = document.getElementById('importStats');
   if (statsEl) {
     const date = timestamp ? new Date(timestamp).toLocaleString() : 'Never';
-    statsEl.innerHTML = `
+    let html = `
       <div class="stat-item">
         <span class="stat-label">Files imported:</span>
         <span class="stat-value">${count}</span>
@@ -86,6 +87,21 @@ function updateImportStats(count, timestamp) {
         <span class="stat-value">${date}</span>
       </div>
     `;
+
+    if (newFunnels !== undefined) {
+      html += `
+        <div class="stat-item">
+          <span class="stat-label">Funnels added:</span>
+          <span class="stat-value">${newFunnels}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Pages added:</span>
+          <span class="stat-value">${newPages}</span>
+        </div>
+      `;
+    }
+
+    statsEl.innerHTML = html;
   }
 }
 

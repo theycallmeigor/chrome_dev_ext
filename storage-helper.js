@@ -31,9 +31,15 @@ async function autoImportFromFolder() {
       }
     }
 
+    // Get existing funnelHistory
+    const existingData = await chrome.storage.local.get(['funnelHistory']);
+    const funnelHistory = existingData.funnelHistory || {};
+
     // Get all JSON files
     const importedFiles = [];
     const importedData = {};
+    let newFunnelsCount = 0;
+    let newPagesCount = 0;
 
     for await (const entry of dirHandle.values()) {
       if (entry.kind === 'file' && entry.name.endsWith('.json')) {
@@ -56,6 +62,51 @@ async function autoImportFromFolder() {
 
           importedFiles.push(entry.name);
           console.log(`[Auto-Import] ✓ Imported: ${entry.name}`);
+
+          // Convert to funnelHistory format if it has funnel data
+          if (data.campaignMetadata && data.campaignMetadata.campaignId) {
+            const funnelId = data.campaignMetadata.campaignId;
+            const domain = data.currentPage?.url ? new URL(data.currentPage.url).hostname : 'unknown';
+
+            // Check if this is a new funnel
+            if (!funnelHistory[funnelId]) {
+              funnelHistory[funnelId] = {
+                name: `Funnel ${funnelId.substring(0, 8)}`,
+                domain: domain,
+                firstSeen: new Date(file.lastModified).toISOString(),
+                pages: {}
+              };
+              newFunnelsCount++;
+            }
+
+            // Extract pages from funnelKitElements
+            if (data.funnelKitElements && Array.isArray(data.funnelKitElements)) {
+              data.funnelKitElements.forEach(element => {
+                if (element.constructedLiveUrl || element.constructedPreviewUrl) {
+                  // Create a page entry
+                  const pageUrl = element.constructedLiveUrl || element.constructedPreviewUrl;
+                  const pageId = element.elementId || element.dataId || Math.random().toString(36).substring(7);
+
+                  if (!funnelHistory[funnelId].pages[pageId]) {
+                    const urlSlug = element.constructedLiveUrl ?
+                      element.constructedLiveUrl.split('/').pop() : '';
+
+                    funnelHistory[funnelId].pages[pageId] = {
+                      title: element.text ? element.text.substring(0, 50) : 'Untitled',
+                      urlSlug: urlSlug,
+                      externalURL: element.constructedLiveUrl || null,
+                      referenceId: pageId,
+                      firstSeen: new Date(file.lastModified).toISOString(),
+                      splitEnabled: false
+                    };
+                    newPagesCount++;
+                  }
+                }
+              });
+            }
+
+            funnelHistory[funnelId].lastSeen = new Date(file.lastModified).toISOString();
+          }
         } catch (e) {
           console.error(`[Auto-Import] Error reading ${entry.name}:`, e);
         }
@@ -63,19 +114,23 @@ async function autoImportFromFolder() {
     }
 
     if (importedFiles.length > 0) {
-      // Save all imported data to chrome.storage
+      // Save all imported data and funnelHistory to chrome.storage
       await chrome.storage.local.set({
         importedFunnelData: importedData,
+        funnelHistory: funnelHistory,
         lastAutoImport: Date.now(),
         autoImportCount: importedFiles.length
       });
 
       console.log(`[Auto-Import] ✓ Successfully imported ${importedFiles.length} file(s)`);
+      console.log(`[Auto-Import] ✓ Added ${newFunnelsCount} new funnel(s) and ${newPagesCount} new page(s) to database`);
 
       return {
         success: true,
         count: importedFiles.length,
-        files: importedFiles
+        files: importedFiles,
+        newFunnels: newFunnelsCount,
+        newPages: newPagesCount
       };
     } else {
       console.log('[Auto-Import] No JSON files found in folder.');
