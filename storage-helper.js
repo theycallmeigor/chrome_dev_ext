@@ -138,6 +138,68 @@ async function autoImportFromFolder() {
 
             funnelHistory[funnelId].lastSeen = new Date(file.lastModified).toISOString();
           }
+
+          // Also check if this is a database export file (different structure)
+          // Database exports have: { funnels: [{ id, name, pages: [...] }] }
+          if (data.funnels && Array.isArray(data.funnels)) {
+            console.log(`[Auto-Import] Found database export with ${data.funnels.length} funnels`);
+
+            data.funnels.forEach(funnel => {
+              if (funnel.id && funnel.pages && Array.isArray(funnel.pages)) {
+                const funnelId = funnel.id;
+
+                // Check if this is a new funnel
+                if (!funnelHistory[funnelId]) {
+                  // Try to extract domain from first page URL
+                  let funnelDomain = 'unknown';
+                  if (funnel.pages.length > 0 && funnel.pages[0].url) {
+                    try {
+                      funnelDomain = new URL(funnel.pages[0].url).hostname;
+                    } catch (e) {
+                      // Invalid URL, keep default
+                    }
+                  }
+
+                  funnelHistory[funnelId] = {
+                    name: funnel.name || `Funnel ${funnelId.substring(0, 8)}`,
+                    domain: funnelDomain,
+                    firstSeen: new Date(file.lastModified).toISOString(),
+                    pages: {}
+                  };
+                  newFunnelsCount++;
+                  console.log(`[Auto-Import] Added funnel: ${funnel.name} (${funnelId})`);
+                }
+
+                // Add all pages from this funnel
+                funnel.pages.forEach(page => {
+                  if (page.id && !funnelHistory[funnelId].pages[page.id]) {
+                    // Extract URL slug from full URL
+                    let urlSlug = page.title || '';
+                    if (page.url) {
+                      try {
+                        const urlObj = new URL(page.url);
+                        urlSlug = urlObj.pathname.substring(1) || page.title; // Remove leading '/'
+                      } catch (e) {
+                        // Invalid URL, use title
+                      }
+                    }
+
+                    funnelHistory[funnelId].pages[page.id] = {
+                      title: page.title || 'Untitled',
+                      urlSlug: urlSlug,
+                      externalURL: page.url || null,
+                      referenceId: page.id,
+                      firstSeen: new Date(page.timestamp || file.lastModified).toISOString(),
+                      splitEnabled: false
+                    };
+                    newPagesCount++;
+                  }
+                });
+
+                funnelHistory[funnelId].lastSeen = new Date(file.lastModified).toISOString();
+              }
+            });
+          }
         } catch (e) {
           console.error(`[Auto-Import] Error reading ${entry.name}:`, e);
         }
