@@ -319,6 +319,36 @@
     .empty-state-text {
       font-size: 14px;
     }
+
+    .import-stats {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6c757d;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      color: #333;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -374,24 +404,38 @@
       <div class="section">
         <div class="section-title">
           <span class="section-icon">📥</span>
-          <span>Import Funnel Data</span>
+          <span>Auto-Import Funnel Data</span>
         </div>
         <div class="section-description">
-          Browse and load previously saved funnel analysis files from your storage folder.
+          All JSON files from your storage folder are automatically imported when you open this page.
         </div>
 
-        <div class="storage-config">
-          <div class="btn-group">
-            <button id="browseFiles" class="btn" style="display: none;">
-              📂 Browse Saved Files
-            </button>
-            <button id="refreshFiles" class="btn btn-secondary" style="display: none;">
-              🔄 Refresh List
+        <div id="importInfo" class="storage-config" style="display: none;">
+          <div id="importStats" class="import-stats">
+            <div class="stat-item">
+              <span class="stat-label">Files imported:</span>
+              <span class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Last import:</span>
+              <span class="stat-value">Never</span>
+            </div>
+          </div>
+
+          <div class="btn-group" style="margin-top: 16px;">
+            <button id="refreshImport" class="btn">
+              🔄 Refresh Import
             </button>
           </div>
 
-          <div id="filesList" class="files-list" style="display: none;"></div>
           <div id="importStatusMessage" class="status-message"></div>
+
+          <div class="info-box">
+            <div class="info-box-title">How it works:</div>
+            <div class="info-box-text">
+              All JSON files in your selected folder are automatically scanned and imported. The data is cached in the extension and available for viewing. Click "Refresh Import" to re-scan the folder for new files.
+            </div>
+          </div>
         </div>
       </div>
 

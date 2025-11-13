@@ -1,5 +1,109 @@
 // Storage helper for saving funnel data to persistent folder
 
+// Auto-import all JSON files from folder on extension startup
+async function autoImportFromFolder() {
+  try {
+    console.log('[Auto-Import] Starting automatic import from folder...');
+
+    // Check if persistent storage is configured
+    const config = await chrome.storage.local.get(['storageFolderConfigured']);
+
+    if (!config.storageFolderConfigured) {
+      console.log('[Auto-Import] Persistent storage not configured. Skipping auto-import.');
+      return { success: false, reason: 'not_configured' };
+    }
+
+    // Get the directory handle
+    const dirHandle = await getDirectoryHandle();
+
+    if (!dirHandle) {
+      console.log('[Auto-Import] No directory handle found.');
+      return { success: false, reason: 'no_handle' };
+    }
+
+    // Check permission
+    const permission = await dirHandle.queryPermission({ mode: 'read' });
+    if (permission !== 'granted') {
+      const requestPermission = await dirHandle.requestPermission({ mode: 'read' });
+      if (requestPermission !== 'granted') {
+        console.log('[Auto-Import] Permission denied.');
+        return { success: false, reason: 'permission_denied' };
+      }
+    }
+
+    // Get all JSON files
+    const importedFiles = [];
+    const importedData = {};
+
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+        try {
+          console.log(`[Auto-Import] Reading file: ${entry.name}`);
+
+          const fileHandle = await dirHandle.getFileHandle(entry.name);
+          const file = await fileHandle.getFile();
+          const contents = await file.text();
+          const data = JSON.parse(contents);
+
+          // Store with filename as key
+          importedData[entry.name] = {
+            data: data,
+            fileName: entry.name,
+            lastModified: file.lastModified,
+            size: file.size,
+            importedAt: Date.now()
+          };
+
+          importedFiles.push(entry.name);
+          console.log(`[Auto-Import] ✓ Imported: ${entry.name}`);
+        } catch (e) {
+          console.error(`[Auto-Import] Error reading ${entry.name}:`, e);
+        }
+      }
+    }
+
+    if (importedFiles.length > 0) {
+      // Save all imported data to chrome.storage
+      await chrome.storage.local.set({
+        importedFunnelData: importedData,
+        lastAutoImport: Date.now(),
+        autoImportCount: importedFiles.length
+      });
+
+      console.log(`[Auto-Import] ✓ Successfully imported ${importedFiles.length} file(s)`);
+
+      return {
+        success: true,
+        count: importedFiles.length,
+        files: importedFiles
+      };
+    } else {
+      console.log('[Auto-Import] No JSON files found in folder.');
+      return {
+        success: true,
+        count: 0,
+        files: []
+      };
+    }
+  } catch (e) {
+    console.error('[Auto-Import] Error during auto-import:', e);
+    return {
+      success: false,
+      reason: 'error',
+      error: e.message
+    };
+  }
+}
+
+// Get all imported funnel data
+async function getImportedFunnelData() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['importedFunnelData'], (result) => {
+      resolve(result.importedFunnelData || {});
+    });
+  });
+}
+
 // Save funnel analysis data to the configured folder
 async function saveFunnelDataToFolder(funnelData) {
   try {
@@ -45,6 +149,9 @@ async function saveFunnelDataToFolder(funnelData) {
     await writable.close();
 
     console.log(`✓ Funnel data saved to: ${fileName}`);
+
+    // Trigger auto-import to update the cache
+    setTimeout(() => autoImportFromFolder(), 1000);
 
     return {
       success: true,

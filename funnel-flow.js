@@ -5,6 +5,11 @@ let currentFilter = 'all';
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
+  // Auto-import data from folder if configured
+  if (typeof autoImportFromFolder === 'function') {
+    await autoImportFromFolder();
+  }
+
   await loadFlowData();
   setupEventListeners();
 });

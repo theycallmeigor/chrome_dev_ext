@@ -10,14 +10,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('selectFolder').addEventListener('click', selectFolder);
   document.getElementById('testStorage').addEventListener('click', testStorage);
   document.getElementById('clearFolder').addEventListener('click', clearFolder);
-  document.getElementById('browseFiles').addEventListener('click', browseFiles);
-  document.getElementById('refreshFiles').addEventListener('click', browseFiles);
+  document.getElementById('refreshImport').addEventListener('click', triggerAutoImport);
+
+  // Automatically import all data from folder on load
+  await triggerAutoImport();
 });
 
 // Load the saved folder path from storage
 async function loadSavedFolder() {
   try {
-    const result = await chrome.storage.local.get(['storageFolderPath', 'storageFolderName']);
+    const result = await chrome.storage.local.get(['storageFolderPath', 'storageFolderName', 'autoImportCount', 'lastAutoImport']);
 
     if (result.storageFolderPath) {
       document.getElementById('currentPath').textContent = result.storageFolderPath;
@@ -25,12 +27,65 @@ async function loadSavedFolder() {
       document.getElementById('testStorage').style.display = 'inline-flex';
       document.getElementById('clearFolder').style.display = 'inline-flex';
 
-      // Show import buttons
-      document.getElementById('browseFiles').style.display = 'inline-flex';
-      document.getElementById('refreshFiles').style.display = 'inline-flex';
+      // Show import info section
+      document.getElementById('importInfo').style.display = 'block';
+
+      // Update import stats if available
+      if (result.autoImportCount !== undefined) {
+        updateImportStats(result.autoImportCount, result.lastAutoImport);
+      }
     }
   } catch (e) {
     console.error('Error loading saved folder:', e);
+  }
+}
+
+// Trigger auto-import of all files
+async function triggerAutoImport() {
+  try {
+    showImportStatus('info', 'Scanning folder and importing all JSON files...');
+
+    const result = await autoImportFromFolder();
+
+    if (!result.success) {
+      if (result.reason === 'not_configured') {
+        showImportStatus('info', 'No folder configured. Please select a storage folder first.');
+      } else if (result.reason === 'permission_denied') {
+        showImportStatus('error', 'Permission denied. Please select the folder again to grant access.');
+      } else {
+        showImportStatus('error', `Error during import: ${result.error}`);
+      }
+      return;
+    }
+
+    if (result.count > 0) {
+      showImportStatus('success', `✓ Successfully imported ${result.count} file(s) from folder!`);
+      updateImportStats(result.count, Date.now());
+    } else {
+      showImportStatus('info', 'No JSON files found in folder.');
+      updateImportStats(0, Date.now());
+    }
+  } catch (e) {
+    console.error('Error during auto-import:', e);
+    showImportStatus('error', `Error during import: ${e.message}`);
+  }
+}
+
+// Update import statistics display
+function updateImportStats(count, timestamp) {
+  const statsEl = document.getElementById('importStats');
+  if (statsEl) {
+    const date = timestamp ? new Date(timestamp).toLocaleString() : 'Never';
+    statsEl.innerHTML = `
+      <div class="stat-item">
+        <span class="stat-label">Files imported:</span>
+        <span class="stat-value">${count}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Last import:</span>
+        <span class="stat-value">${date}</span>
+      </div>
+    `;
   }
 }
 
@@ -306,116 +361,4 @@ function showImportStatus(type, message) {
       statusEl.style.display = 'none';
     }, 5000);
   }
-}
-
-// Browse saved files in the folder
-async function browseFiles() {
-  try {
-    showImportStatus('info', 'Loading files...');
-
-    // Use the listFunnelFiles function from storage-helper.js
-    const result = await listFunnelFiles();
-
-    if (!result.success) {
-      if (result.reason === 'no_handle') {
-        showImportStatus('error', 'No folder configured. Please select a storage folder first.');
-      } else if (result.reason === 'permission_denied') {
-        showImportStatus('error', 'Permission denied. Please select the folder again to grant access.');
-      } else {
-        showImportStatus('error', `Error listing files: ${result.error}`);
-      }
-      return;
-    }
-
-    displayFilesList(result.files);
-
-    if (result.files.length === 0) {
-      showImportStatus('info', 'No saved funnel files found in the folder.');
-    } else {
-      showImportStatus('success', `Found ${result.files.length} saved file(s).`);
-    }
-  } catch (e) {
-    console.error('Error browsing files:', e);
-    showImportStatus('error', `Error browsing files: ${e.message}`);
-  }
-}
-
-// Display the list of files
-function displayFilesList(files) {
-  const filesListEl = document.getElementById('filesList');
-
-  if (files.length === 0) {
-    filesListEl.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📭</div>
-        <div class="empty-state-text">No saved funnel files found</div>
-      </div>
-    `;
-    filesListEl.style.display = 'block';
-    return;
-  }
-
-  let html = '';
-  files.forEach(file => {
-    const date = new Date(file.lastModified);
-    const formattedDate = date.toLocaleString();
-    const sizeKB = (file.size / 1024).toFixed(2);
-
-    html += `
-      <div class="file-item">
-        <div class="file-info">
-          <div class="file-name">${escapeHtml(file.name)}</div>
-          <div class="file-meta">
-            <span>📅 ${formattedDate}</span>
-            <span>💾 ${sizeKB} KB</span>
-          </div>
-        </div>
-        <div class="file-actions">
-          <button class="btn-icon import" onclick="importFile('${escapeHtml(file.name)}')">
-            📥 Import
-          </button>
-        </div>
-      </div>
-    `;
-  });
-
-  filesListEl.innerHTML = html;
-  filesListEl.style.display = 'block';
-}
-
-// Import a file and load it into the extension
-async function importFile(fileName) {
-  try {
-    showImportStatus('info', `Importing ${fileName}...`);
-
-    // Use the loadFunnelDataFromFolder function from storage-helper.js
-    const result = await loadFunnelDataFromFolder(fileName);
-
-    if (!result.success) {
-      showImportStatus('error', `Failed to import: ${result.error || result.reason}`);
-      return;
-    }
-
-    // Save the imported data to chrome.storage so it's available in the extension
-    await chrome.storage.local.set({ currentFlowData: result.data });
-
-    showImportStatus('success', `✓ Successfully imported ${fileName}! Open the extension popup or funnel flow page to view it.`);
-
-    // Optionally open the funnel flow page
-    setTimeout(() => {
-      if (confirm('Data imported successfully! Would you like to view it now?')) {
-        chrome.tabs.create({ url: chrome.runtime.getURL('funnel-flow.html') });
-      }
-    }, 500);
-  } catch (e) {
-    console.error('Error importing file:', e);
-    showImportStatus('error', `Error importing file: ${e.message}`);
-  }
-}
-
-// Escape HTML to prevent XSS
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
