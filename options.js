@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('selectFolder').addEventListener('click', selectFolder);
   document.getElementById('testStorage').addEventListener('click', testStorage);
   document.getElementById('clearFolder').addEventListener('click', clearFolder);
+  document.getElementById('browseFiles').addEventListener('click', browseFiles);
+  document.getElementById('refreshFiles').addEventListener('click', browseFiles);
 });
 
 // Load the saved folder path from storage
@@ -22,6 +24,10 @@ async function loadSavedFolder() {
       document.getElementById('currentPath').classList.remove('empty');
       document.getElementById('testStorage').style.display = 'inline-flex';
       document.getElementById('clearFolder').style.display = 'inline-flex';
+
+      // Show import buttons
+      document.getElementById('browseFiles').style.display = 'inline-flex';
+      document.getElementById('refreshFiles').style.display = 'inline-flex';
     }
   } catch (e) {
     console.error('Error loading saved folder:', e);
@@ -75,6 +81,10 @@ async function selectFolder() {
     document.getElementById('currentPath').classList.remove('empty');
     document.getElementById('testStorage').style.display = 'inline-flex';
     document.getElementById('clearFolder').style.display = 'inline-flex';
+
+    // Show import buttons
+    document.getElementById('browseFiles').style.display = 'inline-flex';
+    document.getElementById('refreshFiles').style.display = 'inline-flex';
 
     showStatus('success', `Folder selected successfully: ${folderName}`);
   } catch (e) {
@@ -256,6 +266,11 @@ async function clearFolder() {
     document.getElementById('testStorage').style.display = 'none';
     document.getElementById('clearFolder').style.display = 'none';
 
+    // Hide import buttons
+    document.getElementById('browseFiles').style.display = 'none';
+    document.getElementById('refreshFiles').style.display = 'none';
+    document.getElementById('filesList').style.display = 'none';
+
     directoryHandle = null;
 
     showStatus('success', 'Folder selection cleared.');
@@ -277,4 +292,130 @@ function showStatus(type, message) {
       statusEl.style.display = 'none';
     }, 5000);
   }
+}
+
+// Show import status message
+function showImportStatus(type, message) {
+  const statusEl = document.getElementById('importStatusMessage');
+  statusEl.className = `status-message ${type}`;
+  statusEl.textContent = message;
+
+  // Auto-hide success and info messages after 5 seconds
+  if (type === 'success' || type === 'info') {
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 5000);
+  }
+}
+
+// Browse saved files in the folder
+async function browseFiles() {
+  try {
+    showImportStatus('info', 'Loading files...');
+
+    // Use the listFunnelFiles function from storage-helper.js
+    const result = await listFunnelFiles();
+
+    if (!result.success) {
+      if (result.reason === 'no_handle') {
+        showImportStatus('error', 'No folder configured. Please select a storage folder first.');
+      } else if (result.reason === 'permission_denied') {
+        showImportStatus('error', 'Permission denied. Please select the folder again to grant access.');
+      } else {
+        showImportStatus('error', `Error listing files: ${result.error}`);
+      }
+      return;
+    }
+
+    displayFilesList(result.files);
+
+    if (result.files.length === 0) {
+      showImportStatus('info', 'No saved funnel files found in the folder.');
+    } else {
+      showImportStatus('success', `Found ${result.files.length} saved file(s).`);
+    }
+  } catch (e) {
+    console.error('Error browsing files:', e);
+    showImportStatus('error', `Error browsing files: ${e.message}`);
+  }
+}
+
+// Display the list of files
+function displayFilesList(files) {
+  const filesListEl = document.getElementById('filesList');
+
+  if (files.length === 0) {
+    filesListEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <div class="empty-state-text">No saved funnel files found</div>
+      </div>
+    `;
+    filesListEl.style.display = 'block';
+    return;
+  }
+
+  let html = '';
+  files.forEach(file => {
+    const date = new Date(file.lastModified);
+    const formattedDate = date.toLocaleString();
+    const sizeKB = (file.size / 1024).toFixed(2);
+
+    html += `
+      <div class="file-item">
+        <div class="file-info">
+          <div class="file-name">${escapeHtml(file.name)}</div>
+          <div class="file-meta">
+            <span>📅 ${formattedDate}</span>
+            <span>💾 ${sizeKB} KB</span>
+          </div>
+        </div>
+        <div class="file-actions">
+          <button class="btn-icon import" onclick="importFile('${escapeHtml(file.name)}')">
+            📥 Import
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  filesListEl.innerHTML = html;
+  filesListEl.style.display = 'block';
+}
+
+// Import a file and load it into the extension
+async function importFile(fileName) {
+  try {
+    showImportStatus('info', `Importing ${fileName}...`);
+
+    // Use the loadFunnelDataFromFolder function from storage-helper.js
+    const result = await loadFunnelDataFromFolder(fileName);
+
+    if (!result.success) {
+      showImportStatus('error', `Failed to import: ${result.error || result.reason}`);
+      return;
+    }
+
+    // Save the imported data to chrome.storage so it's available in the extension
+    await chrome.storage.local.set({ currentFlowData: result.data });
+
+    showImportStatus('success', `✓ Successfully imported ${fileName}! Open the extension popup or funnel flow page to view it.`);
+
+    // Optionally open the funnel flow page
+    setTimeout(() => {
+      if (confirm('Data imported successfully! Would you like to view it now?')) {
+        chrome.tabs.create({ url: chrome.runtime.getURL('funnel-flow.html') });
+      }
+    }, 500);
+  } catch (e) {
+    console.error('Error importing file:', e);
+    showImportStatus('error', `Error importing file: ${e.message}`);
+  }
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }

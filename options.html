@@ -224,6 +224,101 @@
       color: #555;
       line-height: 1.6;
     }
+
+    .files-list {
+      margin-top: 20px;
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .file-item {
+      padding: 16px;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.2s ease;
+    }
+
+    .file-item:last-child {
+      border-bottom: none;
+    }
+
+    .file-item:hover {
+      background: #f8f9fa;
+    }
+
+    .file-info {
+      flex: 1;
+    }
+
+    .file-name {
+      font-weight: 500;
+      color: #333;
+      font-size: 14px;
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    .file-meta {
+      font-size: 12px;
+      color: #6c757d;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-icon.import {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .btn-icon.view {
+      background: #17a2b8;
+    }
+
+    .btn-icon.delete {
+      background: #dc3545;
+    }
+
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: #6c757d;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state-text {
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -275,6 +370,33 @@
 
       <div class="divider"></div>
 
+      <!-- Import Data Section -->
+      <div class="section">
+        <div class="section-title">
+          <span class="section-icon">📥</span>
+          <span>Import Funnel Data</span>
+        </div>
+        <div class="section-description">
+          Browse and load previously saved funnel analysis files from your storage folder.
+        </div>
+
+        <div class="storage-config">
+          <div class="btn-group">
+            <button id="browseFiles" class="btn" style="display: none;">
+              📂 Browse Saved Files
+            </button>
+            <button id="refreshFiles" class="btn btn-secondary" style="display: none;">
+              🔄 Refresh List
+            </button>
+          </div>
+
+          <div id="filesList" class="files-list" style="display: none;"></div>
+          <div id="importStatusMessage" class="status-message"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
       <!-- Features Section -->
       <div class="section">
         <div class="section-title">
@@ -292,6 +414,7 @@
     </div>
   </div>
 
+  <script src="storage-helper.js"></script>
   <script src="options.js"></script>
 </body>
 </html>
