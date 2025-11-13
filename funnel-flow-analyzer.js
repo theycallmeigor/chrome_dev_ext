@@ -511,14 +511,17 @@
       console.log('Error finding campaign ID:', e);
     }
 
-    // Find all elements with IDs starting with fkt-link-, fkt-button-, etc.
+    // Find all elements with IDs starting with fkt-link-, fkt-button-, cc-id-, etc.
     // Prioritize clickable elements, exclude images and other non-clickable elements
     const fktSelectors = [
       'a[id^="fkt-link-"]',
       'button[id^="fkt-button-"]',
       'button[id^="fkt-btn-"]',
       '[role="button"][id^="fkt-"]',
-      'a[id^="fkt-"]'
+      'a[id^="fkt-"]',
+      'a[id^="cc-id-"]',
+      'button[id^="cc-id-"]',
+      '[role="button"][id^="cc-id-"]'
     ];
 
     const foundElements = new Set();
@@ -712,12 +715,12 @@
       }
     }
 
-    // Also search for ALL elements with data-id attributes starting with fkt-
+    // Also search for ALL elements with data-id attributes starting with fkt- or cc-id-
     // Show ALL of them, even if they don't have linkDetails
     try {
-      console.log('=== Searching for all elements with fkt-* data-ids ===');
-      const elementsWithDataId = document.querySelectorAll('[data-id^="fkt-"]');
-      console.log(`Found ${elementsWithDataId.length} elements with fkt-* data-ids`);
+      console.log('=== Searching for all elements with CheckoutChamp data-ids (fkt-*, cc-id-*) ===');
+      const elementsWithDataId = document.querySelectorAll('[data-id^="fkt-"], [data-id^="cc-id-"]');
+      console.log(`Found ${elementsWithDataId.length} elements with CheckoutChamp data-ids`);
 
       for (const el of elementsWithDataId) {
         const dataId = el.getAttribute('data-id');
