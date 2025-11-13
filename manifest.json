@@ -20,7 +20,14 @@
       "128": "icon128.png"
     }
   },
+  "options_page": "options.html",
   "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["page-context-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
