@@ -502,6 +502,8 @@ function displayDataElements() {
           ${element.id ? `<div class="detail-row"><span class="detail-label">ID:</span><span class="detail-value">${element.id}</span></div>` : ''}
           ${element.classes.length > 0 ? `<div class="detail-row"><span class="detail-label">Classes:</span><span class="detail-value">${element.classes.join(', ')}</span></div>` : ''}
           ${element.href ? `<div class="detail-row"><span class="detail-label">HREF:</span><span class="detail-value">${escapeHtml(element.href)}</span></div>` : ''}
+          ${element.constructedLiveUrl ? `<div class="detail-row"><span class="detail-label">Next Page (Live):</span><a href="${element.constructedLiveUrl}" target="_blank" class="detail-value link">${escapeHtml(element.constructedLiveUrl)}</a></div>` : ''}
+          ${element.constructedPreviewUrl ? `<div class="detail-row"><span class="detail-label">Next Page (Preview):</span><a href="${element.constructedPreviewUrl}" target="_blank" class="detail-value link">${escapeHtml(element.constructedPreviewUrl)}</a></div>` : ''}
           <div class="detail-row">
             <span class="detail-label">Data Attributes:</span>
             <div class="data-attrs">${formatDataAttributes(element.dataAttributes)}</div>

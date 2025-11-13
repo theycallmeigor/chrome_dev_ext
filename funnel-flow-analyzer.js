@@ -133,7 +133,7 @@
   }
 
   // 4. Find all elements with data-id, data-next, data-url, etc.
-  function extractDataIdElements() {
+  async function extractDataIdElements() {
     const selectors = [
       '[data-id]',
       '[data-next]',
@@ -149,10 +149,11 @@
 
     const elements = [];
 
-    selectors.forEach(selector => {
+    for (const selector of selectors) {
       const found = document.querySelectorAll(selector);
-      found.forEach((el, index) => {
-        elements.push({
+      for (let index = 0; index < found.length; index++) {
+        const el = found[index];
+        const elementData = {
           selector,
           index,
           tagName: el.tagName.toLowerCase(),
@@ -160,10 +161,54 @@
           dataAttributes: extractDataAttributes(el),
           id: el.id || null,
           classes: Array.from(el.classList),
-          href: el.href || null
-        });
-      });
-    });
+          href: el.href || null,
+          constructedPreviewUrl: null,
+          constructedLiveUrl: null
+        };
+
+        // If this element has a data-id starting with fkt-, try to get its navigation URL
+        const dataId = el.getAttribute('data-id');
+        if (dataId && dataId.startsWith('fkt-')) {
+          console.log(`[Data Attributes] Found fkt-* element: ${dataId}`);
+
+          // Try multiple ID variations
+          const idsToTry = [
+            dataId,
+            el.id
+          ].filter(id => id && id.startsWith('fkt-'));
+
+          // Try to get navigation URL via bridge
+          for (const buttonId of idsToTry) {
+            try {
+              console.log(`[Data Attributes] Trying to get navigation URL for ${buttonId} via bridge...`);
+
+              const urlResult = await getNavigationUrl(buttonId);
+
+              if (urlResult && urlResult.url) {
+                console.log(`[Data Attributes] 🎯 Found URL for ${buttonId}:`, urlResult);
+
+                // Store the URL based on whether it's preview or live
+                if (urlResult.isLive) {
+                  elementData.constructedLiveUrl = `${window.location.origin}/${urlResult.url}`;
+                  console.log(`[Data Attributes] ✓ Built live URL: ${elementData.constructedLiveUrl}`);
+                } else if (urlResult.isPreview) {
+                  elementData.constructedPreviewUrl = `https://funnels-build.thisisatestsiteonly.com/${urlResult.funnelId}/${urlResult.url}`;
+                  console.log(`[Data Attributes] ✓ Built preview URL: ${elementData.constructedPreviewUrl}`);
+                }
+
+                break; // Found URL, stop trying other IDs
+              } else {
+                console.log(`[Data Attributes] ✗ No URL found for ${buttonId}`);
+              }
+            } catch (e) {
+              console.log(`[Data Attributes] Error getting navigation URL for ${buttonId}:`, e);
+            }
+          }
+        }
+
+        elements.push(elementData);
+      }
+    }
 
     return elements;
   }
@@ -986,7 +1031,7 @@
       flowData.links = extractLinks();
       flowData.buttons = extractButtons();
       flowData.forms = extractForms();
-      flowData.dataAttributes = extractDataIdElements();
+      flowData.dataAttributes = await extractDataIdElements();
       flowData.scripts = extractScripts();
       flowData.navigationElements = findNavigationElements();
       flowData.clickHandlers = analyzeClickHandlers();
