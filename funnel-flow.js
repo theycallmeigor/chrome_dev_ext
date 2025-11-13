@@ -12,10 +12,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Load flow data from chrome storage
 async function loadFlowData() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['currentFlowData'], (result) => {
+    chrome.storage.local.get(['currentFlowData'], async (result) => {
       if (result.currentFlowData) {
         flowData = result.currentFlowData;
         displayFlowData();
+
+        // Automatically save to persistent folder if configured
+        if (typeof saveFunnelDataToFolder === 'function') {
+          const saveResult = await saveFunnelDataToFolder(flowData);
+          if (saveResult.success) {
+            console.log(`✓ Funnel data automatically saved to: ${saveResult.fileName}`);
+          } else if (saveResult.reason === 'not_configured') {
+            console.log('Persistent storage not configured. Go to extension options to set up a storage folder.');
+          }
+        }
       } else {
         showNoData();
       }

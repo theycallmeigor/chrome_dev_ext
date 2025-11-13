@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   showHiddenContentBtn.addEventListener('click', revealHiddenContent);
   document.getElementById('analyzeFunnelFlow').addEventListener('click', analyzeFunnelFlow);
   openDatabaseBtn.addEventListener('click', openDatabase);
+  document.getElementById('openSettings').addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
 
   // Collapsible sections
   addCollapsibleListener(filterToggle, () => document.querySelector('.filter-bar'));
