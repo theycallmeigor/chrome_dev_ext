@@ -63,11 +63,42 @@ async function autoImportFromFolder() {
           importedFiles.push(entry.name);
           console.log(`[Auto-Import] ✓ Imported: ${entry.name}`);
 
-          // Convert to funnelHistory format if it has funnel data
-          if (data.campaignMetadata && data.campaignMetadata.campaignId) {
-            const funnelId = data.campaignMetadata.campaignId;
-            const domain = data.currentPage?.url ? new URL(data.currentPage.url).hostname : 'unknown';
+          // Debug: Log the data structure
+          console.log(`[Auto-Import] File structure for ${entry.name}:`, {
+            hasCampaignMetadata: !!data.campaignMetadata,
+            campaignId: data.campaignMetadata?.campaignId,
+            hasCurrentPage: !!data.currentPage,
+            currentPageUrl: data.currentPage?.url,
+            hasFunnelKitElements: !!data.funnelKitElements,
+            funnelKitElementsCount: data.funnelKitElements?.length || 0
+          });
 
+          // Convert to funnelHistory format if it has funnel data
+          // Try multiple possible structures
+          let funnelId = null;
+          let domain = 'unknown';
+
+          // Try to get funnelId from different possible locations
+          if (data.campaignMetadata && data.campaignMetadata.campaignId) {
+            funnelId = data.campaignMetadata.campaignId;
+          } else if (data.funnelData && data.funnelData.referenceId) {
+            funnelId = data.funnelData.referenceId;
+          } else if (data.summary && data.summary.funnelId) {
+            funnelId = data.summary.funnelId;
+          }
+
+          // Try to get domain from different possible locations
+          if (data.currentPage && data.currentPage.url) {
+            try {
+              domain = new URL(data.currentPage.url).hostname;
+            } catch (e) {
+              console.log(`[Auto-Import] Error parsing URL: ${e.message}`);
+            }
+          }
+
+          console.log(`[Auto-Import] Extracted funnelId: ${funnelId}, domain: ${domain}`);
+
+          if (funnelId) {
             // Check if this is a new funnel
             if (!funnelHistory[funnelId]) {
               funnelHistory[funnelId] = {
