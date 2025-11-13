@@ -166,16 +166,16 @@
           constructedLiveUrl: null
         };
 
-        // If this element has a data-id starting with fkt-, try to get its navigation URL
+        // If this element has a data-id starting with fkt- or cc-id-, try to get its navigation URL
         const dataId = el.getAttribute('data-id');
-        if (dataId && dataId.startsWith('fkt-')) {
-          console.log(`[Data Attributes] Found fkt-* element: ${dataId}`);
+        if (dataId && (dataId.startsWith('fkt-') || dataId.startsWith('cc-id-'))) {
+          console.log(`[Data Attributes] Found CheckoutChamp element: ${dataId}`);
 
           // Try multiple ID variations
           const idsToTry = [
             dataId,
             el.id
-          ].filter(id => id && id.startsWith('fkt-'));
+          ].filter(id => id && (id.startsWith('fkt-') || id.startsWith('cc-id-')));
 
           // Try to get navigation URL via bridge
           for (const buttonId of idsToTry) {
